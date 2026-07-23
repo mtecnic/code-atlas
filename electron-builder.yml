@@ -1,0 +1,27 @@
+appId: com.waive.code-atlas
+productName: code-atlas
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!scripts/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+asarUnpack:
+  - resources/**
+extraResources:
+  # grammar wasm must live outside the asar for web-tree-sitter to load it
+  - from: resources/grammars
+    to: grammars
+linux:
+  target:
+    - AppImage
+    - deb
+  maintainer: waive.online
+  category: Development
+appImage:
+  artifactName: ${name}-${version}-${arch}.${ext}
+npmRebuild: false
