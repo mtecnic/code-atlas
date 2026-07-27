@@ -55,6 +55,9 @@ interface AtlasState {
   } | null
   /** bumped after an in-place edit of snapshot.files[...] (save → re-parse) */
   fileVersion: { fileId: FileId; version: number } | null
+  /** diff mode: [commitA, commitB], null = off */
+  diffRange: [number, number] | null
+  diffCounts: { added: number; modified: number; deleted: number } | null
 
   setSnapshot(s: RepoSnapshot): void
   setProgress(p: AnalysisProgress): void
@@ -78,6 +81,8 @@ interface AtlasState {
   setContextMenu(m: { fileId: FileId; x: number; y: number } | null): void
   setFileFilter(f: { keep: Float32Array; label: string } | null): void
   setTour(t: AtlasState['tour']): void
+  setDiffRange(r: [number, number] | null): void
+  setDiffCounts(c: AtlasState['diffCounts']): void
   /** patch a file's metrics in place and notify the scene */
   bumpFileVersion(
     fileId: FileId,
@@ -110,6 +115,8 @@ export const useAtlas = create<AtlasState>((set) => ({
   fileFilter: null,
   tour: null,
   fileVersion: null,
+  diffRange: null,
+  diffCounts: null,
 
   setSnapshot: (snapshot) =>
     set({ snapshot, selected: null, hover: null, timeIndex: -1, moleculeFile: null, moleculeGraph: null, mode: 'city' }),
@@ -135,6 +142,8 @@ export const useAtlas = create<AtlasState>((set) => ({
   setContextMenu: (contextMenu) => set({ contextMenu }),
   setFileFilter: (fileFilter) => set({ fileFilter }),
   setTour: (tour) => set({ tour }),
+  setDiffRange: (diffRange) => set({ diffRange }),
+  setDiffCounts: (diffCounts) => set({ diffCounts }),
   bumpFileVersion: (fileId, patch) =>
     set((s) => {
       if (s.snapshot) Object.assign(s.snapshot.files[fileId], patch)

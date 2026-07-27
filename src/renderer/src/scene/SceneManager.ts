@@ -332,8 +332,22 @@ export class SceneManager {
       if (state.hover !== prev.hover || state.selected !== prev.selected) {
         this.world.setHighlight(state.hover?.fileId ?? null, state.selected)
       }
-      if (state.timeIndex !== prev.timeIndex && this.timeMachine) {
+      if (state.timeIndex !== prev.timeIndex && this.timeMachine && !state.diffRange) {
         this.world.setTimeFactors(this.timeMachine.factorsAt(state.timeIndex))
+      }
+      if (state.diffRange !== prev.diffRange && this.timeMachine && state.snapshot) {
+        if (state.diffRange) {
+          const d = this.timeMachine.diff(state.diffRange[0], state.diffRange[1])
+          this.world.applyLens(d.colors, d.emissive, '#ffd23d')
+          this.world.setTimeFactors(d.factors)
+          state.setDiffCounts(d.counts)
+        } else {
+          // leave diff mode: restore lens + current scrub position
+          const result = computeLens(state.lens, state.snapshot, state.coverage)
+          this.world.applyLens(result.colors, result.emissive, result.emissiveColor)
+          this.world.setTimeFactors(this.timeMachine.factorsAt(state.timeIndex))
+          state.setDiffCounts(null)
+        }
       }
       if (state.flyToRequest !== null && state.flyToRequest !== prev.flyToRequest) {
         const target = this.world.currentTop(state.flyToRequest)
