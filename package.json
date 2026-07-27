@@ -1,6 +1,6 @@
 {
   "name": "code-atlas",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Render any codebase as a navigable 3D world — city, galaxy and molecule views with git time-scrub and local-LLM integration",
   "main": "./out/main/index.js",
   "author": "mtecnic",

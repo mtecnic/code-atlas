@@ -31,6 +31,24 @@
 
 The three views **morph into each other** — buildings lift off and fly into orbit, then collapse back into streets. Same objects, same selection, same picking; only the physics change.
 
+## 🔬 Not just a picture — an instrument
+
+| **Insight lenses** | **Architecture health** |
+|---|---|
+| Recolor the whole city by what you need to know: **complexity**, **hotspots** (churn × complexity), **freshness**, **TODO debt**, **ownership** (bus-factor glow), **coverage** (lcov import). | Tarjan-SCC **cycle detection** drawn as red arc webs, **load-bearing files** ranked by transitive dependents, **dead-code candidates** — every finding is a click-to-fly row. |
+| <img src="docs/screenshots/lens-hotspot.png" alt="Hotspot lens: churn times complexity glows orange" /> | <img src="docs/screenshots/health.png" alt="A 962-file dependency cycle drawn as red arcs over the city" /> |
+
+| **AI copilot that flies the scene** | **Built-in AI editor** |
+|---|---|
+| The chat doesn't just answer — it **operates the visualization** through tools: *"show me the hottest files in the scheduler"* switches the lens, filters the city, and flies you there. Works with native OpenAI tool-calling **or** prompt-based fallback on any endpoint. | Click a building, edit the real file in **CodeMirror 6** — save re-parses it and the building rescales and flashes live. Select code → **AI improve** streams a rewrite into a side-by-side diff with accept/reject. |
+| <img src="docs/screenshots/tour.png" alt="AI-guided tour stop with narration card" /> | <img src="docs/screenshots/editor.png" alt="In-app editor with inspector dossier" /> |
+
+**⇆ Diff mode** — drag two handles on the timeline and the city becomes a review: added files glow green, modified amber, deleted sink red.
+
+<img src="docs/screenshots/diff-mode.png" alt="Diff mode: amber modified buildings across a darkened city" width="100%" />
+
+Plus: **🎓 AI-guided tours** (the model plans a narrated camera flight through the architecture), a **file inspector** dossier (metrics, symbols, imports, cycle membership), **right-click graph ops** (isolate a subsystem, show dependents — everything else sinks away), **meaning-based search** backed by cached one-line AI summaries of every file, camera bookmarks, hi-res screenshot export, recent-repos launch screen, `code-atlas /path` CLI, and an optional watch mode that re-analyzes on save.
+
 ## ⏪ Scrub through time
 
 <img src="docs/screenshots/timescrub.png" alt="Timeline scrubber replaying repository history — buildings grow as commits land" width="100%" />
@@ -43,8 +61,8 @@ Drag the timeline and watch the city **replay its own git history** — building
 - **🕸 Dependency arcs** — hover any file and glowing bezier arcs light up everything it imports and everything that imports it.
 - **🛸 Two flight modes** — orbit with **zoom-to-cursor**, or hit `Tab` for pointer-locked WASD free-flight with altitude-scaled speed: crawl the streets, sprint the skyline.
 - **⌨️ Fly-to search** — `Ctrl+K`, fuzzy-match any file, and the camera sweeps you to its rooftop.
-- **📖 Code preview** — click a building for shiki-highlighted source in a side panel.
-- **🤖 Local-AI native** — point it at an IP and it auto-detects **vLLM, llama.cpp, LM Studio (OpenAI-compatible) or Ollama**. Ask the built-in chat about your architecture — it answers with the selected file's source and its import neighborhood as context, streamed token by token. No cloud, no keys, no telemetry.
+- **📖 Real editing** — click a building and the file opens in a full CodeMirror editor with AI assist; Ctrl+S writes to disk and the city updates.
+- **🤖 Local-AI native** — point it at an IP and it auto-detects **vLLM, llama.cpp, LM Studio (OpenAI-compatible) or Ollama**. The copilot chat operates the scene with tools, plans guided tours, powers the editor, and builds the semantic search index. No cloud, no keys, no telemetry.
 - **🏷 Ambient intelligence** — district and cluster name labels, file labels that fade in when you stop to look, a language legend, a live stats HUD, a minimap, day/night themes, bloom, fog and drifting particles.
 - **🏠 Never lost** — `H` reframes any view perfectly; idle in the galaxy and the camera begins a slow cinematic orbit.
 
@@ -77,7 +95,7 @@ Open **⚙ Settings**, type an IP or host (port optional — common ports are pr
 | Input | Action |
 |---|---|
 | `Drag` / `Wheel` | Orbit / zoom toward cursor |
-| `Click` | Select file → code preview |
+| `Click` | Select file → editor + inspector |
 | `Double-click` | Explode file into molecule view |
 | `Tab` | Toggle fly mode (`WASD` move, `Q/E` down/up, `Shift` boost) |
 | `Ctrl+K` | Fuzzy search → fly to file |
