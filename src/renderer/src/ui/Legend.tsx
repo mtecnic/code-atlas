@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAtlas } from '../store'
 import { languageColor } from '../../../shared/languages'
+import { filterByLanguage } from '../graphops'
 
 export function Legend(): React.JSX.Element | null {
   const snapshot = useAtlas((s) => s.snapshot)
@@ -23,7 +24,12 @@ export function Legend(): React.JSX.Element | null {
     body = (
       <>
         {entries.map(([lang, count]) => (
-          <div key={lang} className="legend-row">
+          <div
+            key={lang}
+            className="legend-row clickable"
+            title={`Filter city to ${lang} files`}
+            onClick={() => filterByLanguage(snapshot, lang)}
+          >
             <span className="legend-swatch" style={{ background: languageColor(lang) }} />
             <span className="legend-lang">{lang}</span>
             <span className="legend-count">{count}</span>

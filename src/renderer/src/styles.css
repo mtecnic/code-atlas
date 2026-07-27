@@ -707,3 +707,167 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ---- inspector ---- */
+.inspector {
+  position: fixed;
+  top: 64px;
+  left: calc(12px + min(560px, 44vw) + 8px);
+  width: 300px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 14px;
+  backdrop-filter: blur(14px);
+  z-index: 19;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.insp-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  padding: 2px 0;
+}
+.insp-bar-label {
+  width: 68px;
+  color: var(--text-dim);
+  flex: none;
+}
+.insp-bar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.insp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+}
+.insp-bar-value {
+  width: 46px;
+  text-align: right;
+  flex: none;
+  color: var(--text);
+}
+.insp-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+.insp-warn {
+  color: #fbbf24;
+}
+.insp-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.insp-symbols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.insp-symbol {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.insp-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.insp-link {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  text-align: left;
+  font-size: 11.5px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.insp-link:hover {
+  background: var(--accent-dim);
+  color: var(--text);
+}
+.insp-actions {
+  display: flex;
+  gap: 6px;
+}
+.insp-actions .btn {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+/* ---- context menu ---- */
+.ctx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+.ctx-menu {
+  position: fixed;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 220px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+.ctx-title {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px 8px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--panel-border);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ctx-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 13px;
+  padding: 7px 10px;
+  cursor: pointer;
+  border-radius: 7px;
+}
+.ctx-item:hover {
+  background: var(--accent-dim);
+}
+.ctx-item.dim {
+  color: var(--text-dim);
+}
+.legend-row.clickable {
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+}
+.legend-row.clickable:hover {
+  background: var(--accent-dim);
+}

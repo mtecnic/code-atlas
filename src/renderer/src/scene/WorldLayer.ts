@@ -57,6 +57,7 @@ export class WorldLayer {
   private tgtPos!: Float32Array
   private tgtScale!: Float32Array
   private heightFactor!: Float32Array // timeline multiplier, 1 = HEAD
+  private filterFactor: Float32Array | null = null // graph-ops filter, null = all shown
   private glow!: Float32Array
   private glowTarget!: Float32Array
   /** top-level dir id per file (galaxy cluster) */
@@ -593,6 +594,12 @@ export class WorldLayer {
     this.settled = false
   }
 
+  /** per-file keep factor (0 = sink away, 1 = keep); composes with timeline */
+  setFilter(keep: Float32Array | null): void {
+    this.filterFactor = keep
+    this.settled = false
+  }
+
   setHighlight(fileId: FileId | null, selectedId: FileId | null): void {
     this.glowTarget.fill(0)
     const light = (id: FileId | null, amount: number): void => {
@@ -762,6 +769,7 @@ export class WorldLayer {
     for (let i = 0; i < n; i++) {
       const i3 = i * 3
       const hf = this.heightFactor[i]
+      const ff = this.filterFactor ? Math.max(0.015, this.filterFactor[i]) : 1
       for (let a = 0; a < 3; a++) {
         const dp = this.tgtPos[i3 + a] - this.curPos[i3 + a]
         this.curPos[i3 + a] += dp * k
@@ -770,6 +778,7 @@ export class WorldLayer {
           // timeline shrink: city shrinks height, galaxy shrinks all axes
           if (this.mode === 'galaxy' || a === 1) target *= Math.max(0.002, hf)
         }
+        if (ff !== 1) target *= ff // filtered-out files sink to slivers
         const ds = target - this.curScale[i3 + a]
         this.curScale[i3 + a] += ds * k
         maxDelta = Math.max(maxDelta, Math.abs(dp), Math.abs(ds))

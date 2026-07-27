@@ -297,6 +297,15 @@ export class SceneManager {
       if (state.mode === 'molecule' || !state.hover) return
       void enterMoleculeFor(state.hover.fileId)
     })
+    this.renderer.domElement.addEventListener('contextmenu', (e) => {
+      e.preventDefault()
+      if (this.rig.mode === 'fly') return
+      const state = useAtlas.getState()
+      if (state.mode === 'molecule' || !state.snapshot) return
+      this.raycaster.setFromCamera(this.pointer, this.rig.camera)
+      const hit = this.world.raycast(this.raycaster)
+      if (hit !== null) state.setContextMenu({ fileId: hit, x: e.clientX, y: e.clientY })
+    })
 
     // react to store changes. `prev` is swapped BEFORE handling: some handlers
     // set store fields themselves (e.g. setLensLegend), which re-enters this
@@ -350,6 +359,9 @@ export class SceneManager {
       }
       if (state.healthOpen !== prev.healthOpen) {
         this.world.setCyclesVisible(state.healthOpen)
+      }
+      if (state.fileFilter !== prev.fileFilter) {
+        this.world.setFilter(state.fileFilter ? state.fileFilter.keep : null)
       }
     })
 

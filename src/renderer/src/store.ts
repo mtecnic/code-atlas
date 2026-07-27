@@ -44,6 +44,9 @@ interface AtlasState {
   lensLegend: LensResult['legend'] | null
   health: HealthReport | null
   healthOpen: boolean
+  contextMenu: { fileId: FileId; x: number; y: number } | null
+  /** active graph-ops filter (keep array consumed by the scene) */
+  fileFilter: { keep: Float32Array; label: string } | null
 
   setSnapshot(s: RepoSnapshot): void
   setProgress(p: AnalysisProgress): void
@@ -64,6 +67,8 @@ interface AtlasState {
   setLensLegend(l: LensResult['legend'] | null): void
   setHealth(h: HealthReport | null): void
   setHealthOpen(v: boolean): void
+  setContextMenu(m: { fileId: FileId; x: number; y: number } | null): void
+  setFileFilter(f: { keep: Float32Array; label: string } | null): void
 }
 
 export const useAtlas = create<AtlasState>((set) => ({
@@ -87,6 +92,8 @@ export const useAtlas = create<AtlasState>((set) => ({
   lensLegend: null,
   health: null,
   healthOpen: false,
+  contextMenu: null,
+  fileFilter: null,
 
   setSnapshot: (snapshot) =>
     set({ snapshot, selected: null, hover: null, timeIndex: -1, moleculeFile: null, moleculeGraph: null, mode: 'city' }),
@@ -108,5 +115,7 @@ export const useAtlas = create<AtlasState>((set) => ({
   setCoverage: (coverage) => set({ coverage }),
   setLensLegend: (lensLegend) => set({ lensLegend }),
   setHealth: (health) => set({ health }),
-  setHealthOpen: (healthOpen) => set({ healthOpen })
+  setHealthOpen: (healthOpen) => set({ healthOpen }),
+  setContextMenu: (contextMenu) => set({ contextMenu }),
+  setFileFilter: (fileFilter) => set({ fileFilter })
 }))

@@ -11,7 +11,10 @@ import { ProgressOverlay } from './ui/ProgressOverlay'
 import { HudStats } from './ui/HudStats'
 import { Legend } from './ui/Legend'
 import { FindingsPanel } from './ui/FindingsPanel'
+import { Inspector } from './ui/Inspector'
+import { ContextMenu } from './ui/ContextMenu'
 import { analyzeHealth } from './analysis/graph-health'
+import * as graphops from './graphops'
 
 function HoverTooltip(): React.JSX.Element | null {
   const hover = useAtlas((s) => s.hover)
@@ -60,7 +63,7 @@ export default function App(): React.JSX.Element {
     sceneRef.current = new SceneManager(mountRef.current)
 
     // dev/test hook used by the ATLAS_* env helpers in the main process
-    ;(window as unknown as Record<string, unknown>).__atlasDebug = { store: useAtlas }
+    ;(window as unknown as Record<string, unknown>).__atlasDebug = { store: useAtlas, graphops }
     const offProgress = window.atlas.onProgress((p) => useAtlas.getState().setProgress(p))
     const offSnapshot = window.atlas.onSnapshot((s) => {
       const state = useAtlas.getState()
@@ -91,8 +94,10 @@ export default function App(): React.JSX.Element {
       const state = useAtlas.getState()
       const typing = (e.target as HTMLElement)?.tagName === 'INPUT'
       if (e.key === 'Escape') {
-        if (state.searchOpen) state.setSearchOpen(false)
+        if (state.contextMenu) state.setContextMenu(null)
+        else if (state.searchOpen) state.setSearchOpen(false)
         else if (state.settingsOpen) state.setSettingsOpen(false)
+        else if (state.fileFilter) state.setFileFilter(null)
         else if (state.mode === 'molecule') {
           state.setMolecule(null, null)
           state.setMode('city')
@@ -132,10 +137,12 @@ export default function App(): React.JSX.Element {
       <Legend />
       <Timeline />
       <CodePreview />
+      <Inspector />
       <FindingsPanel />
       <ChatPanel />
       <SearchPalette />
       <SettingsPanel />
+      <ContextMenu />
       {cameraMode === 'fly' && (
         <div className="fly-hint">WASD move · QE up/down · Shift boost · Esc exit fly mode</div>
       )}

@@ -26,6 +26,7 @@ export function Toolbar({
   const coverage = useAtlas((s) => s.coverage)
   const health = useAtlas((s) => s.health)
   const healthOpen = useAtlas((s) => s.healthOpen)
+  const fileFilter = useAtlas((s) => s.fileFilter)
   const {
     setMode,
     setTheme,
@@ -36,7 +37,8 @@ export function Toolbar({
     requestReframe,
     setLens,
     setCoverage,
-    setHealthOpen
+    setHealthOpen,
+    setFileFilter
   } = useAtlas()
 
   const findingCount = health ? health.cycles.length + health.dead.length : 0
@@ -104,6 +106,15 @@ export function Toolbar({
       >
         ⚕ Health{findingCount > 0 ? ` (${findingCount})` : ''}
       </button>
+      {fileFilter && (
+        <button
+          className="btn accent"
+          title="Active filter — click to clear (Esc)"
+          onClick={() => setFileFilter(null)}
+        >
+          🎯 {fileFilter.label} ✕
+        </button>
+      )}
       <div className="spacer" />
       <button
         className="btn"
