@@ -345,6 +345,12 @@ export class SceneManager {
         this.world.applyLens(result.colors, result.emissive, result.emissiveColor)
         state.setLensLegend(result.legend)
       }
+      if (state.health !== prev.health) {
+        this.world.setCycles(state.health ? state.health.cycles.flatMap((c) => c.edges) : null)
+      }
+      if (state.healthOpen !== prev.healthOpen) {
+        this.world.setCyclesVisible(state.healthOpen)
+      }
     })
 
     // dev/test hook for scripted verification

@@ -10,6 +10,8 @@ import { Timeline } from './ui/Timeline'
 import { ProgressOverlay } from './ui/ProgressOverlay'
 import { HudStats } from './ui/HudStats'
 import { Legend } from './ui/Legend'
+import { FindingsPanel } from './ui/FindingsPanel'
+import { analyzeHealth } from './analysis/graph-health'
 
 function HoverTooltip(): React.JSX.Element | null {
   const hover = useAtlas((s) => s.hover)
@@ -60,7 +62,11 @@ export default function App(): React.JSX.Element {
     // dev/test hook used by the ATLAS_* env helpers in the main process
     ;(window as unknown as Record<string, unknown>).__atlasDebug = { store: useAtlas }
     const offProgress = window.atlas.onProgress((p) => useAtlas.getState().setProgress(p))
-    const offSnapshot = window.atlas.onSnapshot((s) => useAtlas.getState().setSnapshot(s))
+    const offSnapshot = window.atlas.onSnapshot((s) => {
+      const state = useAtlas.getState()
+      state.setSnapshot(s)
+      state.setHealth(analyzeHealth(s))
+    })
     void window.atlas.getSettings().then((s) => {
       if (s.llm) useAtlas.getState().setLlm(s.llm)
     })
@@ -126,6 +132,7 @@ export default function App(): React.JSX.Element {
       <Legend />
       <Timeline />
       <CodePreview />
+      <FindingsPanel />
       <ChatPanel />
       <SearchPalette />
       <SettingsPanel />

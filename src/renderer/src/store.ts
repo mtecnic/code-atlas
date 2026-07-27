@@ -7,6 +7,7 @@ import type {
   RepoSnapshot
 } from '../../shared/model'
 import type { LensId, LensResult } from './lenses'
+import type { HealthReport } from './analysis/graph-health'
 
 export type ViewMode = 'city' | 'galaxy' | 'molecule'
 export type Theme = 'night' | 'day'
@@ -41,6 +42,8 @@ interface AtlasState {
   coverage: number[] | null
   /** legend metadata for the active lens, set by the scene */
   lensLegend: LensResult['legend'] | null
+  health: HealthReport | null
+  healthOpen: boolean
 
   setSnapshot(s: RepoSnapshot): void
   setProgress(p: AnalysisProgress): void
@@ -59,6 +62,8 @@ interface AtlasState {
   setLens(l: LensId): void
   setCoverage(c: number[] | null): void
   setLensLegend(l: LensResult['legend'] | null): void
+  setHealth(h: HealthReport | null): void
+  setHealthOpen(v: boolean): void
 }
 
 export const useAtlas = create<AtlasState>((set) => ({
@@ -80,6 +85,8 @@ export const useAtlas = create<AtlasState>((set) => ({
   lens: 'language',
   coverage: null,
   lensLegend: null,
+  health: null,
+  healthOpen: false,
 
   setSnapshot: (snapshot) =>
     set({ snapshot, selected: null, hover: null, timeIndex: -1, moleculeFile: null, moleculeGraph: null, mode: 'city' }),
@@ -99,5 +106,7 @@ export const useAtlas = create<AtlasState>((set) => ({
   requestReframe: () => set((s) => ({ reframeRequest: s.reframeRequest + 1 })),
   setLens: (lens) => set({ lens }),
   setCoverage: (coverage) => set({ coverage }),
-  setLensLegend: (lensLegend) => set({ lensLegend })
+  setLensLegend: (lensLegend) => set({ lensLegend }),
+  setHealth: (health) => set({ health }),
+  setHealthOpen: (healthOpen) => set({ healthOpen })
 }))

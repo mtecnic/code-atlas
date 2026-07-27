@@ -40,6 +40,9 @@ export class WorldLayer {
   private baseEdges: THREE.LineSegments | null = null
   private arcLines: THREE.LineSegments | null = null
   private districtEdges: THREE.LineSegments | null = null
+  private cycleArcs: THREE.LineSegments | null = null
+  private cycleEdgePairs: number[] | null = null
+  private cyclesVisible = false
   private labels: TextMesh[] = []
   private clusterLabels: TextMesh[] = []
   private nearLabels: TextMesh[] = []
@@ -98,8 +101,68 @@ export class WorldLayer {
     this.arcLines?.geometry.dispose()
     this.districtEdges?.geometry.dispose()
     ;(this.districtEdges?.material as THREE.Material | undefined)?.dispose()
+    this.cycleArcs?.geometry.dispose()
+    ;(this.cycleArcs?.material as THREE.Material | undefined)?.dispose()
     this.buildings = this.platforms = null
-    this.baseEdges = this.arcLines = this.districtEdges = null
+    this.baseEdges = this.arcLines = this.districtEdges = this.cycleArcs = null
+    this.cycleEdgePairs = null
+  }
+
+  /** red arc overlay for dependency cycles; edges = flat [src, dst, ...] */
+  setCycles(edgePairs: number[] | null): void {
+    this.cycleEdgePairs = edgePairs
+    this.rebuildCycleArcs()
+  }
+
+  setCyclesVisible(v: boolean): void {
+    this.cyclesVisible = v
+    if (this.cycleArcs) this.cycleArcs.visible = v
+    else if (v) this.rebuildCycleArcs()
+  }
+
+  private rebuildCycleArcs(): void {
+    if (this.cycleArcs) {
+      this.group.remove(this.cycleArcs)
+      this.cycleArcs.geometry.dispose()
+      ;(this.cycleArcs.material as THREE.Material).dispose()
+      this.cycleArcs = null
+    }
+    const pairs = this.cycleEdgePairs
+    if (!pairs || !pairs.length || !this.snapshot) return
+    const SEGMENTS = 16
+    const count = Math.min(pairs.length / 2, 1200)
+    const positions = new Float32Array(count * SEGMENTS * 6)
+    let o = 0
+    for (let e = 0; e < count; e++) {
+      const from = this.currentTop(pairs[e * 2])
+      const to = this.currentTop(pairs[e * 2 + 1])
+      const mid = from.clone().add(to).multiplyScalar(0.5)
+      mid.y += from.distanceTo(to) * 0.3 + 10
+      const pts = new THREE.QuadraticBezierCurve3(from, mid, to).getPoints(SEGMENTS)
+      for (let i = 0; i < SEGMENTS; i++) {
+        positions[o++] = pts[i].x
+        positions[o++] = pts[i].y
+        positions[o++] = pts[i].z
+        positions[o++] = pts[i + 1].x
+        positions[o++] = pts[i + 1].y
+        positions[o++] = pts[i + 1].z
+      }
+    }
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    this.cycleArcs = new THREE.LineSegments(
+      geo,
+      new THREE.LineBasicMaterial({
+        color: 0xff5566,
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+      })
+    )
+    this.cycleArcs.frustumCulled = false
+    this.cycleArcs.visible = this.cyclesVisible
+    this.group.add(this.cycleArcs)
   }
 
   setSnapshot(snapshot: RepoSnapshot): void {
@@ -767,6 +830,10 @@ export class WorldLayer {
       pos.needsUpdate = true
     }
 
-    if (maxDelta < 0.003 && Math.abs(blendDelta) < 0.002) this.settled = true
+    if (maxDelta < 0.003 && Math.abs(blendDelta) < 0.002) {
+      this.settled = true
+      // positions just came to rest — snap the cycle overlay to them
+      this.rebuildCycleArcs()
+    }
   }
 }

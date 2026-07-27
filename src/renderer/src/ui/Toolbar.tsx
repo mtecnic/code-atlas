@@ -24,6 +24,8 @@ export function Toolbar({
   const selected = useAtlas((s) => s.selected)
   const lens = useAtlas((s) => s.lens)
   const coverage = useAtlas((s) => s.coverage)
+  const health = useAtlas((s) => s.health)
+  const healthOpen = useAtlas((s) => s.healthOpen)
   const {
     setMode,
     setTheme,
@@ -33,8 +35,11 @@ export function Toolbar({
     setMolecule,
     requestReframe,
     setLens,
-    setCoverage
+    setCoverage,
+    setHealthOpen
   } = useAtlas()
+
+  const findingCount = health ? health.cycles.length + health.dead.length : 0
 
   const pickLens = async (id: LensId): Promise<void> => {
     if (id === 'coverage' && !coverage) {
@@ -91,6 +96,14 @@ export function Toolbar({
           </option>
         ))}
       </select>
+      <button
+        className={`btn ${healthOpen ? 'active' : ''}`}
+        disabled={!snapshot || !health}
+        onClick={() => setHealthOpen(!healthOpen)}
+        title="Architecture health: cycles, load-bearing files, dead code"
+      >
+        ⚕ Health{findingCount > 0 ? ` (${findingCount})` : ''}
+      </button>
       <div className="spacer" />
       <button
         className="btn"
