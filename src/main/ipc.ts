@@ -6,7 +6,7 @@ import type { FileId, LlmChatMessage } from '../shared/model'
 import { analyze, cancelAnalysis } from './analyzer/analyzer'
 import { analysisStore, loadSettings, saveSettings } from './store'
 import { probeEndpoint } from './llm/probe'
-import { abortChat, startChat } from './llm/chat'
+import { abortChat, resolveToolResult, startChat } from './llm/chat'
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(CHANNELS.openFolderDialog, async () => {
@@ -62,13 +62,19 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return result
   })
 
-  ipcMain.handle(CHANNELS.llmChat, async (e, messages: LlmChatMessage[]) => {
-    const settings = await loadSettings()
-    if (!settings.llm) throw new Error('No LLM endpoint configured')
-    return startChat(e.sender, settings.llm, messages)
-  })
+  ipcMain.handle(
+    CHANNELS.llmChat,
+    async (e, messages: LlmChatMessage[], tools?: Record<string, unknown>[]) => {
+      const settings = await loadSettings()
+      if (!settings.llm) throw new Error('No LLM endpoint configured')
+      return startChat(e.sender, settings.llm, messages, tools)
+    }
+  )
 
   ipcMain.handle(CHANNELS.llmAbort, (_e, requestId: string) => abortChat(requestId))
+  ipcMain.handle(CHANNELS.llmToolResult, (_e, requestId: string, callId: string, result: string) =>
+    resolveToolResult(requestId, callId, result)
+  )
 
   ipcMain.handle(CHANNELS.loadLcov, async () => {
     const win = getWindow()

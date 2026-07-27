@@ -1,10 +1,13 @@
-// Renderer-side helper multiplexing streamed LLM responses by requestId.
+// Renderer-side helper multiplexing streamed LLM responses by requestId, and
+// dispatching the agent's scene-tool calls back through the registry.
 import type { LlmChatMessage } from '../../shared/model'
+import { dispatchTool, toolSchemas } from './ai-tools'
 
 interface Stream {
   onDelta: (delta: string) => void
   onDone: () => void
   onError: (err: string) => void
+  onTool?: (name: string, args: Record<string, unknown>) => void
 }
 
 const streams = new Map<string, Stream>()
@@ -22,6 +25,12 @@ function wire(): void {
     streams.get(requestId)?.onError(error)
     streams.delete(requestId)
   })
+  window.atlas.onLlmToolCall(({ requestId, callId, name, args }) => {
+    streams.get(requestId)?.onTool?.(name, args)
+    void dispatchTool(name, args).then((result) =>
+      window.atlas.llmToolResult(requestId, callId, result)
+    )
+  })
 }
 
 export interface ChatHandle {
@@ -31,10 +40,11 @@ export interface ChatHandle {
 
 export async function streamChat(
   messages: LlmChatMessage[],
-  handlers: Stream
+  handlers: Stream,
+  opts?: { agent?: boolean }
 ): Promise<ChatHandle> {
   wire()
-  const requestId = await window.atlas.llmChat(messages)
+  const requestId = await window.atlas.llmChat(messages, opts?.agent ? toolSchemas() : undefined)
   streams.set(requestId, handlers)
   return { requestId, abort: () => void window.atlas.llmAbort(requestId) }
 }

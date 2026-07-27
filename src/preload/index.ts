@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import { CHANNELS } from '../shared/ipc-contract'
-import type { AtlasApi, AtlasSettings, LlmChunkPayload } from '../shared/ipc-contract'
+import type {
+  AtlasApi,
+  AtlasSettings,
+  LlmChunkPayload,
+  LlmToolCallPayload
+} from '../shared/ipc-contract'
 import type { AnalysisProgress, FileId, LlmChatMessage, RepoSnapshot } from '../shared/model'
 
 function subscribe<T>(channel: string, cb: (payload: T) => void): () => void {
@@ -16,8 +21,11 @@ const api: AtlasApi = {
   readFile: (fileId: FileId) => ipcRenderer.invoke(CHANNELS.readFile, fileId),
   getModuleGraph: (fileIds: FileId[]) => ipcRenderer.invoke(CHANNELS.getModuleGraph, fileIds),
   llmProbe: (host: string, port?: number) => ipcRenderer.invoke(CHANNELS.llmProbe, host, port),
-  llmChat: (messages: LlmChatMessage[]) => ipcRenderer.invoke(CHANNELS.llmChat, messages),
+  llmChat: (messages: LlmChatMessage[], tools?: Record<string, unknown>[]) =>
+    ipcRenderer.invoke(CHANNELS.llmChat, messages, tools),
   llmAbort: (requestId: string) => ipcRenderer.invoke(CHANNELS.llmAbort, requestId),
+  llmToolResult: (requestId: string, callId: string, result: string) =>
+    ipcRenderer.invoke(CHANNELS.llmToolResult, requestId, callId, result),
   getSettings: () => ipcRenderer.invoke(CHANNELS.getSettings),
   saveSettings: (patch: Partial<AtlasSettings>) => ipcRenderer.invoke(CHANNELS.saveSettings, patch),
   loadLcov: () => ipcRenderer.invoke(CHANNELS.loadLcov),
@@ -34,7 +42,8 @@ const api: AtlasApi = {
       cb(requestId, error)
     ipcRenderer.on(CHANNELS.llmError, listener)
     return () => ipcRenderer.removeListener(CHANNELS.llmError, listener)
-  }
+  },
+  onLlmToolCall: (cb) => subscribe<LlmToolCallPayload>(CHANNELS.llmToolCall, cb)
 }
 
 contextBridge.exposeInMainWorld('atlas', api)

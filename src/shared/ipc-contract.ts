@@ -20,6 +20,7 @@ export const CHANNELS = {
   llmProbe: 'atlas:llm-probe',
   llmChat: 'atlas:llm-chat',
   llmAbort: 'atlas:llm-abort',
+  llmToolResult: 'atlas:llm-tool-result',
   getSettings: 'atlas:get-settings',
   saveSettings: 'atlas:save-settings',
   loadLcov: 'atlas:load-lcov',
@@ -28,7 +29,8 @@ export const CHANNELS = {
   analysisSnapshot: 'atlas:analysis-snapshot',
   llmChunk: 'atlas:llm-chunk',
   llmDone: 'atlas:llm-done',
-  llmError: 'atlas:llm-error'
+  llmError: 'atlas:llm-error',
+  llmToolCall: 'atlas:llm-tool-call'
 } as const
 
 export interface AtlasSettings {
@@ -42,6 +44,13 @@ export interface LlmChunkPayload {
   delta: string
 }
 
+export interface LlmToolCallPayload {
+  requestId: string
+  callId: string
+  name: string
+  args: Record<string, unknown>
+}
+
 export interface AtlasApi {
   openFolderDialog(): Promise<string | null>
   /** kicks off analysis; snapshot arrives via onSnapshot, progress via onProgress */
@@ -50,8 +59,10 @@ export interface AtlasApi {
   readFile(fileId: FileId): Promise<string | null>
   getModuleGraph(fileIds: FileId[]): Promise<ModuleGraph>
   llmProbe(host: string, port?: number): Promise<LlmProbeResult>
-  llmChat(messages: LlmChatMessage[]): Promise<string> // returns requestId
+  /** start a chat; optional OpenAI tool schemas enable the scene-agent loop */
+  llmChat(messages: LlmChatMessage[], tools?: Record<string, unknown>[]): Promise<string>
   llmAbort(requestId: string): Promise<void>
+  llmToolResult(requestId: string, callId: string, result: string): Promise<void>
   getSettings(): Promise<AtlasSettings>
   saveSettings(patch: Partial<AtlasSettings>): Promise<AtlasSettings>
   /** open an lcov file; returns per-FileId coverage 0..1 (-1 = no data), or null if canceled */
@@ -61,4 +72,5 @@ export interface AtlasApi {
   onLlmChunk(cb: (c: LlmChunkPayload) => void): () => void
   onLlmDone(cb: (requestId: string) => void): () => void
   onLlmError(cb: (requestId: string, error: string) => void): () => void
+  onLlmToolCall(cb: (c: LlmToolCallPayload) => void): () => void
 }

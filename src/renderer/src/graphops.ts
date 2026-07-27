@@ -108,6 +108,8 @@ export function filterByGlob(snapshot: RepoSnapshot, glob: string): number {
   snapshot.files.forEach((f, id) => {
     if (rx.test(f.path)) kept.push(id)
   })
-  applyFilter({ keep: keepFrom(snapshot, kept), label: `${glob} (${kept.length})` })
+  if (kept.length) {
+    applyFilter({ keep: keepFrom(snapshot, kept), label: `${glob} (${kept.length})` })
+  }
   return kept.length
 }

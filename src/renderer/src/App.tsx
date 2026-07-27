@@ -15,6 +15,7 @@ import { Inspector } from './ui/Inspector'
 import { ContextMenu } from './ui/ContextMenu'
 import { analyzeHealth } from './analysis/graph-health'
 import * as graphops from './graphops'
+import { streamChat } from './llm'
 
 function HoverTooltip(): React.JSX.Element | null {
   const hover = useAtlas((s) => s.hover)
@@ -63,7 +64,11 @@ export default function App(): React.JSX.Element {
     sceneRef.current = new SceneManager(mountRef.current)
 
     // dev/test hook used by the ATLAS_* env helpers in the main process
-    ;(window as unknown as Record<string, unknown>).__atlasDebug = { store: useAtlas, graphops }
+    ;(window as unknown as Record<string, unknown>).__atlasDebug = {
+      store: useAtlas,
+      graphops,
+      llm: { streamChat }
+    }
     const offProgress = window.atlas.onProgress((p) => useAtlas.getState().setProgress(p))
     const offSnapshot = window.atlas.onSnapshot((s) => {
       const state = useAtlas.getState()
