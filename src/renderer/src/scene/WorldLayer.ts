@@ -43,6 +43,9 @@ export class WorldLayer {
   private cycleArcs: THREE.LineSegments | null = null
   private cycleEdgePairs: number[] | null = null
   private cyclesVisible = false
+  private arcCurves: THREE.QuadraticBezierCurve3[] = []
+  private traffic: THREE.Points | null = null
+  private trafficTime = 0
   private labels: TextMesh[] = []
   private clusterLabels: TextMesh[] = []
   private nearLabels: TextMesh[] = []
@@ -652,6 +655,13 @@ export class WorldLayer {
       ;(this.arcLines.material as THREE.Material).dispose()
       this.arcLines = null
     }
+    this.arcCurves = []
+    if (this.traffic) {
+      this.group.remove(this.traffic)
+      this.traffic.geometry.dispose()
+      ;(this.traffic.material as THREE.Material).dispose()
+      this.traffic = null
+    }
     if (fileId === null || !this.snapshot) return
     const neighbors = [...(this.neighborsOf.get(fileId) ?? [])]
     if (!neighbors.length) return
@@ -659,11 +669,13 @@ export class WorldLayer {
     const positions = new Float32Array(neighbors.length * SEGMENTS * 6)
     let o = 0
     const from = this.currentTop(fileId)
+    this.arcCurves = []
     for (const nb of neighbors) {
       const to = this.currentTop(nb)
       const mid = from.clone().add(to).multiplyScalar(0.5)
       mid.y += from.distanceTo(to) * 0.35 + 14
       const curve = new THREE.QuadraticBezierCurve3(from, mid, to)
+      this.arcCurves.push(curve)
       const pts = curve.getPoints(SEGMENTS)
       for (let i = 0; i < SEGMENTS; i++) {
         positions[o++] = pts[i].x
@@ -686,6 +698,25 @@ export class WorldLayer {
     this.arcLines = new THREE.LineSegments(geo, mat)
     this.arcLines.frustumCulled = false
     this.group.add(this.arcLines)
+
+    // traffic: bright motes flowing along the arcs
+    const count = Math.min(140, this.arcCurves.length * 5)
+    const tGeo = new THREE.BufferGeometry()
+    tGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(count * 3), 3))
+    this.traffic = new THREE.Points(
+      tGeo,
+      new THREE.PointsMaterial({
+        color: 0xd4f1ff,
+        size: 3.2,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true
+      })
+    )
+    this.traffic.frustumCulled = false
+    this.group.add(this.traffic)
   }
 
   /** current world position of a file's visual center-top (for arcs/flyTo) */
@@ -757,6 +788,23 @@ export class WorldLayer {
   update(dt: number, camera: THREE.Camera): void {
     if (!this.snapshot || !this.buildings || !this.platforms) return
     const k = 1 - Math.pow(0.002, dt) // smoothing toward targets
+
+    // arc traffic animates every frame regardless of settle state
+    if (this.traffic && this.arcCurves.length) {
+      this.trafficTime += dt * 0.22
+      const attr = this.traffic.geometry.getAttribute('position') as THREE.BufferAttribute
+      const arr = attr.array as Float32Array
+      const count = arr.length / 3
+      for (let i = 0; i < count; i++) {
+        const curve = this.arcCurves[i % this.arcCurves.length]
+        const t = (this.trafficTime + i / count) % 1
+        const p = curve.getPoint(t)
+        arr[i * 3] = p.x
+        arr[i * 3 + 1] = p.y
+        arr[i * 3 + 2] = p.z
+      }
+      attr.needsUpdate = true
+    }
 
     // cheap scalar lerps run every frame, even when instances are settled
     const blendDelta = this.galaxyBlendTarget - this.galaxyBlend

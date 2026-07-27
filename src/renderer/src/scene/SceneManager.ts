@@ -425,17 +425,46 @@ export class SceneManager {
     }
   }
 
+  private lastRootPath: string | null = null
+
   private loadSnapshot(snapshot: RepoSnapshot): void {
+    const sameRepo = this.lastRootPath === snapshot.rootPath
+    this.lastRootPath = snapshot.rootPath
     this.world.setSnapshot(snapshot)
     this.molecule.hide()
     this.timeMachine = new TimeMachine(snapshot)
     this.applyWorldScale()
-    const b = this.world.getBounds()
-    this.rig.frameSphere(b.center, b.radius, {
-      direction: CITY_DIR,
-      immediate: !this.framedOnce
-    })
+    // watch-lite refreshes of the same repo keep the camera where it is
+    if (!sameRepo) {
+      const b = this.world.getBounds()
+      this.rig.frameSphere(b.center, b.radius, {
+        direction: CITY_DIR,
+        immediate: !this.framedOnce
+      })
+    }
     this.framedOnce = true
+  }
+
+  /** render one frame at high pixel density and return it as a PNG data URL */
+  captureHiRes(scale = 3): string {
+    const prevRatio = this.renderer.getPixelRatio()
+    const w = this.container.clientWidth || 1
+    const h = this.container.clientHeight || 1
+    this.renderer.setPixelRatio(scale)
+    this.composer.setSize(w, h)
+    this.composer.render()
+    const url = this.renderer.domElement.toDataURL('image/png')
+    this.renderer.setPixelRatio(prevRatio)
+    this.composer.setSize(w, h)
+    return url
+  }
+
+  saveBookmark(): { pos: number[]; target: number[] } {
+    return this.rig.getPose()
+  }
+
+  gotoBookmark(pos: number[], target: number[]): void {
+    this.rig.goTo(pos, target)
   }
 
   private applyWorldScale(): void {

@@ -34,6 +34,7 @@ const api: AtlasApi = {
   buildSummaries: () => ipcRenderer.invoke(CHANNELS.buildSummaries),
   cancelSummaries: () => ipcRenderer.invoke(CHANNELS.cancelSummaries),
   getSummaries: () => ipcRenderer.invoke(CHANNELS.getSummaries),
+  saveScreenshot: (dataUrl: string) => ipcRenderer.invoke(CHANNELS.saveScreenshot, dataUrl),
   onSummariesProgress: (cb) => subscribe<{ done: number; total: number }>(CHANNELS.summariesProgress, cb),
   onProgress: (cb) => subscribe<AnalysisProgress>(CHANNELS.analysisProgress, cb),
   onSnapshot: (cb) => subscribe<RepoSnapshot>(CHANNELS.analysisSnapshot, cb),

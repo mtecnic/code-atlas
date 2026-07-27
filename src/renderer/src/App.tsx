@@ -40,6 +40,12 @@ function HoverTooltip(): React.JSX.Element | null {
 function Welcome({ onOpen }: { onOpen: () => void }): React.JSX.Element | null {
   const snapshot = useAtlas((s) => s.snapshot)
   const progress = useAtlas((s) => s.progress)
+  const [recents, setRecents] = useState<string[]>([])
+
+  useEffect(() => {
+    void window.atlas.getSettings().then((s) => setRecents(s.recentRepos ?? []))
+  }, [])
+
   if (snapshot || (progress && progress.phase !== 'error')) return null
   return (
     <div className="welcome">
@@ -48,9 +54,19 @@ function Welcome({ onOpen }: { onOpen: () => void }): React.JSX.Element | null {
       <button className="btn accent big" onClick={onOpen}>
         📂 Open a codebase
       </button>
+      {recents.length > 0 && (
+        <div className="recents">
+          {recents.slice(0, 6).map((r) => (
+            <button key={r} className="recent-row" onClick={() => void window.atlas.analyze(r)}>
+              <span className="recent-name">{r.split('/').filter(Boolean).pop()}</span>
+              <span className="recent-path">{r}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <p className="hint">
         City · Galaxy · Molecule views — WASD fly-through, git time-scrub, dependency arcs, AI
-        explanations.
+        copilot & tours.
       </p>
     </div>
   )
@@ -116,6 +132,23 @@ export default function App(): React.JSX.Element {
         state.setSearchOpen(!state.searchOpen)
       } else if (e.code === 'KeyH' && !typing && !e.ctrlKey && !e.metaKey) {
         state.requestReframe()
+      } else if (/^Digit[1-5]$/.test(e.code) && !typing && !e.ctrlKey && !e.metaKey) {
+        // camera bookmarks: Shift+N saves, N recalls
+        const slot = Number(e.code.slice(5)) - 1
+        const repo = state.snapshot?.rootPath
+        const scene = sceneRef.current
+        if (!repo || !scene) return
+        void window.atlas.getSettings().then(async (settings) => {
+          const all = settings.bookmarks ?? {}
+          const list = all[repo] ?? []
+          if (e.shiftKey) {
+            const pose = scene.saveBookmark()
+            list[slot] = { name: `slot ${slot + 1}`, ...pose }
+            await window.atlas.saveSettings({ bookmarks: { ...all, [repo]: list } })
+          } else if (list[slot]) {
+            scene.gotoBookmark(list[slot].pos, list[slot].target)
+          }
+        })
       } else if (e.key === 'Tab' && !typing) {
         e.preventDefault()
         toggleCamera()
@@ -137,6 +170,10 @@ export default function App(): React.JSX.Element {
       <Toolbar
         onOpenFolder={() => void openFolder()}
         onCameraToggle={toggleCamera}
+        onScreenshot={() => {
+          const url = sceneRef.current?.captureHiRes(3)
+          if (url) void window.atlas.saveScreenshot(url)
+        }}
         cameraMode={cameraMode}
       />
       <Welcome onOpen={() => void openFolder()} />

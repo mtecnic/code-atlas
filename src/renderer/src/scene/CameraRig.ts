@@ -70,6 +70,24 @@ export class CameraRig {
     this.camera.updateProjectionMatrix()
   }
 
+  /** current camera pose (position + orbit target) for bookmarks */
+  getPose(): { pos: number[]; target: number[] } {
+    return {
+      pos: this.camera.position.toArray(),
+      target: this.orbit.target.toArray()
+    }
+  }
+
+  /** tween to a bookmarked pose */
+  goTo(pos: number[], target: number[], duration = 1.0): void {
+    this.lastInteraction = performance.now()
+    this.startTween(
+      new THREE.Vector3().fromArray(pos),
+      new THREE.Vector3().fromArray(target),
+      duration
+    )
+  }
+
   /** enable cinematic idle auto-orbit (ramped in/out smoothly) */
   setAutoRotate(enabled: boolean): void {
     this.autoRotateTarget = enabled ? 0.4 : 0

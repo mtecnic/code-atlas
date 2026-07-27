@@ -13,10 +13,12 @@ const MODES: { id: ViewMode; label: string; icon: string }[] = [
 export function Toolbar({
   onOpenFolder,
   onCameraToggle,
+  onScreenshot,
   cameraMode
 }: {
   onOpenFolder: () => void
   onCameraToggle: () => void
+  onScreenshot: () => void
   cameraMode: 'orbit' | 'fly'
 }): React.JSX.Element {
   const mode = useAtlas((s) => s.mode)
@@ -127,6 +129,14 @@ export function Toolbar({
       </button>
       <button className="btn" disabled={!snapshot} onClick={() => setSearchOpen(true)} title="Ctrl+K">
         🔍 Search
+      </button>
+      <button
+        className="btn"
+        disabled={!snapshot}
+        onClick={onScreenshot}
+        title="Save a high-resolution screenshot"
+      >
+        📸
       </button>
       <button className="btn" onClick={onCameraToggle} title="Tab">
         {cameraMode === 'orbit' ? '🛸 Fly' : '🌐 Orbit'}

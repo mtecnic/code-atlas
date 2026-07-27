@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { statSync } from 'node:fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerIpc } from './ipc'
@@ -28,7 +29,17 @@ function createWindow(): void {
   // dev/test hooks, sequential pipeline:
   //   load → [ATLAS_OPEN: analyze + wait for snapshot] → [ATLAS_MODE] →
   //   [ATLAS_EVAL] → settle → [ATLAS_SHOT capture]
-  const autoOpen2 = process.env.ATLAS_OPEN
+  // CLI: `code-atlas /path/to/repo` (also via code-atlas.sh passthrough)
+  const cliArgs = process.argv.slice(app.isPackaged ? 1 : 2)
+  const cliRepo = cliArgs.find((a) => {
+    if (a.startsWith('-') || a.endsWith('.js')) return false
+    try {
+      return statSync(a).isDirectory()
+    } catch {
+      return false
+    }
+  })
+  const autoOpen2 = process.env.ATLAS_OPEN ?? cliRepo
   const shotPath2 = process.env.ATLAS_SHOT
   const evalCode2 = process.env.ATLAS_EVAL
   const mode2 = process.env.ATLAS_MODE

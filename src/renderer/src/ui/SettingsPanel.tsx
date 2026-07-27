@@ -11,6 +11,11 @@ export function SettingsPanel(): React.JSX.Element | null {
   const [indexBusy, setIndexBusy] = useState(false)
   const [indexProgress, setIndexProgress] = useState('')
   const [indexStatus, setIndexStatus] = useState('')
+  const [watchOn, setWatchOn] = useState(false)
+
+  useEffect(() => {
+    if (open) void window.atlas.getSettings().then((s) => setWatchOn(!!s.watch))
+  }, [open])
 
   useEffect(() => {
     const off = window.atlas.onSummariesProgress(({ done, total }) =>
@@ -113,6 +118,18 @@ export function SettingsPanel(): React.JSX.Element | null {
             {indexStatus && <p className="status">{indexStatus}</p>}
           </>
         )}
+        <h3>Live watch</h3>
+        <label className="diff-check">
+          <input
+            type="checkbox"
+            checked={watchOn}
+            onChange={(e) => {
+              setWatchOn(e.target.checked)
+              void window.atlas.saveSettings({ watch: e.target.checked })
+            }}
+          />
+          Re-analyze automatically when files change (applies on next open)
+        </label>
         <div className="dialog-footer">
           <button className="btn" onClick={() => setSettingsOpen(false)}>
             Close

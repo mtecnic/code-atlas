@@ -28,6 +28,7 @@ export const CHANNELS = {
   buildSummaries: 'atlas:build-summaries',
   cancelSummaries: 'atlas:cancel-summaries',
   getSummaries: 'atlas:get-summaries',
+  saveScreenshot: 'atlas:save-screenshot',
   // main → renderer (send)
   analysisProgress: 'atlas:analysis-progress',
   analysisSnapshot: 'atlas:analysis-snapshot',
@@ -42,6 +43,9 @@ export interface AtlasSettings {
   llm?: LlmEndpoint
   maxCommits?: number
   maxFiles?: number
+  recentRepos?: string[]
+  watch?: boolean
+  bookmarks?: Record<string, { name: string; pos: number[]; target: number[] }[]>
 }
 
 export interface LlmChunkPayload {
@@ -84,6 +88,8 @@ export interface AtlasApi {
   buildSummaries(): Promise<{ built: number; cached: number; total: number } | { error: string }>
   cancelSummaries(): Promise<void>
   getSummaries(): Promise<Record<string, string>>
+  /** save a data-URL PNG via the native save dialog */
+  saveScreenshot(dataUrl: string): Promise<boolean>
   onSummariesProgress(cb: (p: { done: number; total: number }) => void): () => void
   onProgress(cb: (p: AnalysisProgress) => void): () => void
   onSnapshot(cb: (s: RepoSnapshot) => void): () => void

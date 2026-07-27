@@ -4,8 +4,11 @@ import path from 'node:path'
 import { grammarFor } from '../shared/languages'
 import { analyze, cancelAnalysis, grammarDir } from './analyzer/analyzer'
 import parseSingle from './analyzer/parse-worker'
+import { watch, type FSWatcher } from 'node:fs'
 
 const backedUp = new Set<string>()
+let watcher: FSWatcher | null = null
+let watchTimer: ReturnType<typeof setTimeout> | null = null
 import { CHANNELS } from '../shared/ipc-contract'
 import type { AtlasSettings } from '../shared/ipc-contract'
 import type { FileId, LlmChatMessage } from '../shared/model'
@@ -25,10 +28,28 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return result.canceled || !result.filePaths.length ? null : result.filePaths[0]
   })
 
-  ipcMain.handle(CHANNELS.analyze, async (_e, rootPath: string) => {
+  const runAnalyze = async (rootPath: string): Promise<void> => {
     const win = getWindow()
     if (!win) return
     const settings = await loadSettings()
+    // remember recents (most recent first, deduped)
+    const recents = [rootPath, ...(settings.recentRepos ?? []).filter((r) => r !== rootPath)]
+    await saveSettings({ recentRepos: recents.slice(0, 8) })
+    // (re)arm the watch-lite watcher
+    watcher?.close()
+    watcher = null
+    if (settings.watch) {
+      try {
+        watcher = watch(rootPath, { recursive: true }, (_ev, name) => {
+          const file = String(name ?? '')
+          if (/(^|\/)(\.git|node_modules|dist|out|__pycache__)(\/|$)/.test(file)) return
+          if (watchTimer) clearTimeout(watchTimer)
+          watchTimer = setTimeout(() => void runAnalyze(rootPath), 2500)
+        })
+      } catch (err) {
+        console.warn('[atlas] watch failed:', err)
+      }
+    }
     console.log('[atlas] analyze start:', rootPath)
     void analyze(
       rootPath,
@@ -43,6 +64,21 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
         onSnapshot: (s) => !win.isDestroyed() && win.webContents.send(CHANNELS.analysisSnapshot, s)
       }
     )
+  }
+
+  ipcMain.handle(CHANNELS.analyze, (_e, rootPath: string) => runAnalyze(rootPath))
+
+  ipcMain.handle(CHANNELS.saveScreenshot, async (_e, dataUrl: string) => {
+    const win = getWindow()
+    if (!win || !dataUrl.startsWith('data:image/png;base64,')) return false
+    const picked = await dialog.showSaveDialog(win, {
+      title: 'Save screenshot',
+      defaultPath: 'code-atlas.png',
+      filters: [{ name: 'PNG', extensions: ['png'] }]
+    })
+    if (picked.canceled || !picked.filePath) return false
+    await fs.writeFile(picked.filePath, Buffer.from(dataUrl.split(',')[1], 'base64'))
+    return true
   })
 
   ipcMain.handle(CHANNELS.cancelAnalysis, () => cancelAnalysis())
