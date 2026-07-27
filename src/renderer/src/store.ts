@@ -6,6 +6,7 @@ import type {
   ModuleGraph,
   RepoSnapshot
 } from '../../shared/model'
+import type { LensId, LensResult } from './lenses'
 
 export type ViewMode = 'city' | 'galaxy' | 'molecule'
 export type Theme = 'night' | 'day'
@@ -35,6 +36,11 @@ interface AtlasState {
   flyToRequest: FileId | null
   /** increment to ask the scene to reframe the current view (Home) */
   reframeRequest: number
+  lens: LensId
+  /** per-FileId line coverage 0..1 (-1 = no data), from lcov */
+  coverage: number[] | null
+  /** legend metadata for the active lens, set by the scene */
+  lensLegend: LensResult['legend'] | null
 
   setSnapshot(s: RepoSnapshot): void
   setProgress(p: AnalysisProgress): void
@@ -50,6 +56,9 @@ interface AtlasState {
   setTimeIndex(i: number): void
   requestFlyTo(f: FileId | null): void
   requestReframe(): void
+  setLens(l: LensId): void
+  setCoverage(c: number[] | null): void
+  setLensLegend(l: LensResult['legend'] | null): void
 }
 
 export const useAtlas = create<AtlasState>((set) => ({
@@ -68,6 +77,9 @@ export const useAtlas = create<AtlasState>((set) => ({
   timeIndex: -1,
   flyToRequest: null,
   reframeRequest: 0,
+  lens: 'language',
+  coverage: null,
+  lensLegend: null,
 
   setSnapshot: (snapshot) =>
     set({ snapshot, selected: null, hover: null, timeIndex: -1, moleculeFile: null, moleculeGraph: null, mode: 'city' }),
@@ -84,5 +96,8 @@ export const useAtlas = create<AtlasState>((set) => ({
   setLlm: (llm) => set({ llm }),
   setTimeIndex: (timeIndex) => set({ timeIndex }),
   requestFlyTo: (flyToRequest) => set({ flyToRequest }),
-  requestReframe: () => set((s) => ({ reframeRequest: s.reframeRequest + 1 }))
+  requestReframe: () => set((s) => ({ reframeRequest: s.reframeRequest + 1 })),
+  setLens: (lens) => set({ lens }),
+  setCoverage: (coverage) => set({ coverage }),
+  setLensLegend: (lensLegend) => set({ lensLegend })
 }))

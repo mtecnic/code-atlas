@@ -2,7 +2,23 @@
 // name prefixes route matches: import.* → import specifiers, def.* → symbol
 // definitions, ref.* → call/reference sites.
 
+// decision-point captures for the complexity metric (counted as @cx)
+const JS_CX = `
+(if_statement) @cx
+(for_statement) @cx
+(for_in_statement) @cx
+(while_statement) @cx
+(do_statement) @cx
+(switch_case) @cx
+(catch_clause) @cx
+(ternary_expression) @cx
+(binary_expression operator: "&&") @cx
+(binary_expression operator: "||") @cx
+(binary_expression operator: "??") @cx
+`
+
 const JS_COMMON = `
+${JS_CX}
 (import_statement source: (string (string_fragment) @import.source))
 (export_statement source: (string (string_fragment) @import.source))
 (call_expression
@@ -33,6 +49,15 @@ export const QUERIES: Record<string, string> = {
   tsx: JS_COMMON + TS_EXTRA,
 
   python: `
+(if_statement) @cx
+(elif_clause) @cx
+(for_statement) @cx
+(while_statement) @cx
+(except_clause) @cx
+(conditional_expression) @cx
+(boolean_operator) @cx
+(case_clause) @cx
+(if_clause) @cx
 (import_statement name: (dotted_name) @import.source)
 (import_statement name: (aliased_import name: (dotted_name) @import.source))
 (import_from_statement module_name: (dotted_name) @import.source)
@@ -47,6 +72,13 @@ export const QUERIES: Record<string, string> = {
 `,
 
   go: `
+(if_statement) @cx
+(for_statement) @cx
+(expression_case) @cx
+(type_case) @cx
+(communication_case) @cx
+(binary_expression operator: "&&") @cx
+(binary_expression operator: "||") @cx
 (import_spec path: (interpreted_string_literal) @import.source)
 
 (function_declaration name: (identifier) @def.function)
@@ -60,6 +92,14 @@ export const QUERIES: Record<string, string> = {
 `,
 
   rust: `
+(if_expression) @cx
+(while_expression) @cx
+(for_expression) @cx
+(loop_expression) @cx
+(match_arm) @cx
+(binary_expression operator: "&&") @cx
+(binary_expression operator: "||") @cx
+(try_expression) @cx
 (use_declaration argument: (_) @import.source)
 (mod_item name: (identifier) @import.module)
 
@@ -77,6 +117,14 @@ export const QUERIES: Record<string, string> = {
 `,
 
   c: `
+(if_statement) @cx
+(for_statement) @cx
+(while_statement) @cx
+(do_statement) @cx
+(case_statement) @cx
+(conditional_expression) @cx
+(binary_expression operator: "&&") @cx
+(binary_expression operator: "||") @cx
 (preproc_include path: (string_literal) @import.source)
 
 (function_definition declarator: (function_declarator declarator: (identifier) @def.function))
@@ -88,6 +136,15 @@ export const QUERIES: Record<string, string> = {
 `,
 
   cpp: `
+(if_statement) @cx
+(for_statement) @cx
+(while_statement) @cx
+(do_statement) @cx
+(case_statement) @cx
+(conditional_expression) @cx
+(catch_clause) @cx
+(binary_expression operator: "&&") @cx
+(binary_expression operator: "||") @cx
 (preproc_include path: (string_literal) @import.source)
 
 (function_definition declarator: (function_declarator declarator: (identifier) @def.function))
@@ -104,6 +161,16 @@ export const QUERIES: Record<string, string> = {
 `,
 
   java: `
+(if_statement) @cx
+(for_statement) @cx
+(enhanced_for_statement) @cx
+(while_statement) @cx
+(do_statement) @cx
+(switch_label) @cx
+(catch_clause) @cx
+(ternary_expression) @cx
+(binary_expression operator: "&&") @cx
+(binary_expression operator: "||") @cx
 (import_declaration (scoped_identifier) @import.source)
 
 (class_declaration name: (identifier) @def.class)

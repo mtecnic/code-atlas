@@ -21,6 +21,10 @@ export interface ChurnInfo {
   authors: number
   /** 0..1 recency-decayed heat used for emissive intensity */
   heat: number
+  /** author with the most commits to this file ('' if unknown) */
+  topAuthor: string
+  /** that author's share of the file's commits, 0..1 */
+  topShare: number
 }
 
 export interface FileNode {
@@ -31,6 +35,10 @@ export interface FileNode {
   language: string | null
   loc: number
   sizeBytes: number
+  /** decision-point count (cyclomatic-style), 0 if not parsed */
+  complexity: number
+  /** TODO/FIXME/HACK/XXX marker count */
+  todoCount: number
   churn: ChurnInfo
   /** tree-sitter parse succeeded */
   analyzed: boolean

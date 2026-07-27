@@ -20,6 +20,7 @@ const api: AtlasApi = {
   llmAbort: (requestId: string) => ipcRenderer.invoke(CHANNELS.llmAbort, requestId),
   getSettings: () => ipcRenderer.invoke(CHANNELS.getSettings),
   saveSettings: (patch: Partial<AtlasSettings>) => ipcRenderer.invoke(CHANNELS.saveSettings, patch),
+  loadLcov: () => ipcRenderer.invoke(CHANNELS.loadLcov),
   onProgress: (cb) => subscribe<AnalysisProgress>(CHANNELS.analysisProgress, cb),
   onSnapshot: (cb) => subscribe<RepoSnapshot>(CHANNELS.analysisSnapshot, cb),
   onLlmChunk: (cb) => subscribe<LlmChunkPayload>(CHANNELS.llmChunk, cb),

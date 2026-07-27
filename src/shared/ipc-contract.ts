@@ -22,6 +22,7 @@ export const CHANNELS = {
   llmAbort: 'atlas:llm-abort',
   getSettings: 'atlas:get-settings',
   saveSettings: 'atlas:save-settings',
+  loadLcov: 'atlas:load-lcov',
   // main → renderer (send)
   analysisProgress: 'atlas:analysis-progress',
   analysisSnapshot: 'atlas:analysis-snapshot',
@@ -53,6 +54,8 @@ export interface AtlasApi {
   llmAbort(requestId: string): Promise<void>
   getSettings(): Promise<AtlasSettings>
   saveSettings(patch: Partial<AtlasSettings>): Promise<AtlasSettings>
+  /** open an lcov file; returns per-FileId coverage 0..1 (-1 = no data), or null if canceled */
+  loadLcov(): Promise<{ coverage: number[]; coveredFiles: number } | null>
   onProgress(cb: (p: AnalysisProgress) => void): () => void
   onSnapshot(cb: (s: RepoSnapshot) => void): () => void
   onLlmChunk(cb: (c: LlmChunkPayload) => void): () => void

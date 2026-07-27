@@ -20,6 +20,7 @@ interface WorldUniforms {
   uHeatGain: { value: number }
   uGlowAll: { value: number }
   uWindows: { value: number }
+  uHeatColor: { value: THREE.Color }
 }
 
 function hash01(s: string): number {
@@ -313,6 +314,7 @@ export class WorldLayer {
       shader.uniforms.uHeatGain = { value: 0.55 }
       shader.uniforms.uGlowAll = { value: 0.0 } // >0 in galaxy: everything glows
       shader.uniforms.uWindows = { value: 0.0 } // night-city lit windows
+      shader.uniforms.uHeatColor = { value: new THREE.Color(1.0, 0.42, 0.12) }
       this.shaderUniforms = shader.uniforms as unknown as WorldUniforms
       shader.vertexShader = shader.vertexShader
         .replace(
@@ -353,6 +355,7 @@ export class WorldLayer {
           uniform float uHeatGain;
           uniform float uGlowAll;
           uniform float uWindows;
+          uniform vec3 uHeatColor;
           varying float vHeat;
           varying float vGlow;
           varying float vRand;
@@ -363,8 +366,7 @@ export class WorldLayer {
         .replace(
           '#include <emissivemap_fragment>',
           `#include <emissivemap_fragment>
-          vec3 heatColor = vec3(1.0, 0.42, 0.12);
-          totalEmissiveRadiance += heatColor * vHeat * vHeat * uHeatGain;
+          totalEmissiveRadiance += uHeatColor * vHeat * vHeat * uHeatGain;
           #ifdef USE_INSTANCING_COLOR
           totalEmissiveRadiance += vColor * (uGlowAll + vGlow * 1.6);
           #else
@@ -427,6 +429,21 @@ export class WorldLayer {
   /** night-ness (0 day … 1 night), from SceneManager's theme lerp */
   setWindowStrength(v: number): void {
     this.windowStrength = v
+  }
+
+  /** recolor + re-glow every building from a computed lens result */
+  applyLens(colors: Float32Array, emissive: Float32Array, emissiveColor: string): void {
+    if (!this.buildings || !this.snapshot) return
+    const instColor = this.buildings.instanceColor
+    if (instColor) {
+      ;(instColor.array as Float32Array).set(colors)
+      instColor.needsUpdate = true
+    }
+    if (this.heatAttr) {
+      ;(this.heatAttr.array as Float32Array).set(emissive)
+      this.heatAttr.needsUpdate = true
+    }
+    this.shaderUniforms?.uHeatColor.value.set(emissiveColor)
   }
 
   private applyModeTargets(): void {

@@ -39,7 +39,7 @@ export async function readGitHistory(
   const commits: GitCommitMeta[] = []
   const events: GitTimelineEvent[] = []
   const churn = new Map<FileId, ChurnInfo>()
-  const authorsPerFile = new Map<FileId, Set<string>>()
+  const authorsPerFile = new Map<FileId, Map<string, number>>()
   // maps a historical path forward to its current (HEAD) path
   const pathForward = new Map<string, string>()
 
@@ -94,13 +94,21 @@ export async function readGitHistory(
     if (fileId === undefined) continue // deleted before HEAD or unscanned
 
     const info =
-      churn.get(fileId) ?? ({ commits: 0, lastTouched: 0, authors: 0, heat: 0 } as ChurnInfo)
+      churn.get(fileId) ??
+      ({
+        commits: 0,
+        lastTouched: 0,
+        authors: 0,
+        heat: 0,
+        topAuthor: '',
+        topShare: 0
+      } as ChurnInfo)
     info.commits += 1
     info.lastTouched = Math.max(info.lastTouched, current.time)
     churn.set(fileId, info)
     let authors = authorsPerFile.get(fileId)
-    if (!authors) authorsPerFile.set(fileId, (authors = new Set()))
-    authors.add(current.author)
+    if (!authors) authorsPerFile.set(fileId, (authors = new Map()))
+    authors.set(current.author, (authors.get(current.author) ?? 0) + 1)
 
     let kind: GitTimelineEvent['kind']
     if (isRename) kind = 'R'
@@ -119,7 +127,16 @@ export async function readGitHistory(
   let maxScore = 0
   const scores = new Map<FileId, number>()
   for (const [fileId, info] of churn) {
-    info.authors = authorsPerFile.get(fileId)?.size ?? 0
+    const perAuthor = authorsPerFile.get(fileId)
+    info.authors = perAuthor?.size ?? 0
+    if (perAuthor) {
+      for (const [author, count] of perAuthor) {
+        if (count / info.commits > info.topShare) {
+          info.topShare = count / info.commits
+          info.topAuthor = author
+        }
+      }
+    }
     const age = Math.max(0, now - info.lastTouched)
     const score = info.commits * Math.pow(0.5, age / HALF_LIFE)
     scores.set(fileId, score)

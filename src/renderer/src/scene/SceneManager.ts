@@ -8,6 +8,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import type { RepoSnapshot } from '../../../shared/model'
 import { useAtlas, type Theme, type ViewMode } from '../store'
 import { enterMoleculeFor } from '../molecule'
+import { computeLens } from '../lenses'
 import { WorldLayer } from './WorldLayer'
 import { MoleculeLayer } from './MoleculeLayer'
 import { CameraRig } from './CameraRig'
@@ -297,9 +298,13 @@ export class SceneManager {
       void enterMoleculeFor(state.hover.fileId)
     })
 
-    // react to store changes
-    let prev = useAtlas.getState()
+    // react to store changes. `prev` is swapped BEFORE handling: some handlers
+    // set store fields themselves (e.g. setLensLegend), which re-enters this
+    // subscription synchronously — with a stale `prev` that recursed forever.
+    let last = useAtlas.getState()
     this.unsub = useAtlas.subscribe((state) => {
+      const prev = last
+      last = state
       if (state.snapshot !== prev.snapshot && state.snapshot) {
         this.loadSnapshot(state.snapshot)
       }
@@ -330,7 +335,16 @@ export class SceneManager {
       if (state.reframeRequest !== prev.reframeRequest) {
         this.reframe()
       }
-      prev = state
+      if (
+        state.snapshot &&
+        (state.lens !== prev.lens ||
+          state.coverage !== prev.coverage ||
+          state.snapshot !== prev.snapshot)
+      ) {
+        const result = computeLens(state.lens, state.snapshot, state.coverage)
+        this.world.applyLens(result.colors, result.emissive, result.emissiveColor)
+        state.setLensLegend(result.legend)
+      }
     })
 
     // dev/test hook for scripted verification

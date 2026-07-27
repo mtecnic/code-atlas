@@ -1,6 +1,7 @@
 import { useAtlas } from '../store'
 import type { ViewMode } from '../store'
 import { enterMoleculeFor } from '../molecule'
+import { LENSES, type LensId } from '../lenses'
 
 const MODES: { id: ViewMode; label: string; icon: string }[] = [
   { id: 'city', label: 'City', icon: '🏙' },
@@ -21,6 +22,8 @@ export function Toolbar({
   const snapshot = useAtlas((s) => s.snapshot)
   const theme = useAtlas((s) => s.theme)
   const selected = useAtlas((s) => s.selected)
+  const lens = useAtlas((s) => s.lens)
+  const coverage = useAtlas((s) => s.coverage)
   const {
     setMode,
     setTheme,
@@ -28,8 +31,19 @@ export function Toolbar({
     setSettingsOpen,
     setChatOpen,
     setMolecule,
-    requestReframe
+    requestReframe,
+    setLens,
+    setCoverage
   } = useAtlas()
+
+  const pickLens = async (id: LensId): Promise<void> => {
+    if (id === 'coverage' && !coverage) {
+      const loaded = await window.atlas.loadLcov()
+      if (!loaded) return // canceled — keep previous lens
+      setCoverage(loaded.coverage)
+    }
+    setLens(id)
+  }
 
   const enterMolecule = async (): Promise<void> => {
     if (selected === null || !snapshot) return
@@ -64,6 +78,19 @@ export function Toolbar({
           </button>
         ))}
       </div>
+      <select
+        className="btn lens-select"
+        disabled={!snapshot}
+        value={lens}
+        title="Insight lens — how the city is colored"
+        onChange={(e) => void pickLens(e.target.value as LensId)}
+      >
+        {LENSES.map((l) => (
+          <option key={l.id} value={l.id}>
+            🔬 {l.label}
+          </option>
+        ))}
+      </select>
       <div className="spacer" />
       <button
         className="btn"

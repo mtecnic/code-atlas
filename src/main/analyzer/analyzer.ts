@@ -98,7 +98,9 @@ export async function analyze(
         language: languageForPath(sf.relPath),
         loc: 0,
         sizeBytes: sf.sizeBytes,
-        churn: { commits: 0, lastTouched: 0, authors: 0, heat: 0 },
+        complexity: 0,
+        todoCount: 0,
+        churn: { commits: 0, lastTouched: 0, authors: 0, heat: 0, topAuthor: '', topShare: 0 },
         analyzed: false,
         symbolCount: 0
       })
@@ -112,9 +114,11 @@ export async function analyze(
 
     // ---- parse pool ----
     const gDir = grammarDir()
+    // capped: parse is sub-second at 8 threads, and this machine often runs a
+    // memory-hungry LLM — spawning cpus-2 wasm workers under pressure can stall
     const pool = new Piscina<ParseTask, ParseResult>({
       filename: workerFile(),
-      maxThreads: Math.max(2, os.cpus().length - 2)
+      maxThreads: Math.max(2, Math.min(8, os.cpus().length - 2))
     })
     let parsed = 0
     const rawImports: string[][] = new Array(files.length)
@@ -132,6 +136,8 @@ export async function analyze(
           })
           file.loc = result.loc
           file.analyzed = result.analyzed
+          file.complexity = result.cx
+          file.todoCount = result.todoCount
           file.symbolCount = result.defs.length
           rawImports[id] = result.imports
           if (result.analyzed) {

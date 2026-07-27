@@ -30,10 +30,16 @@ export interface RawRef {
 export interface ParseResult {
   loc: number
   analyzed: boolean
+  /** decision-point count (cyclomatic-style) */
+  cx: number
+  /** TODO/FIXME/HACK/XXX markers */
+  todoCount: number
   imports: string[]
   defs: RawDef[]
   refs: RawRef[]
 }
+
+const TODO_RE = /\b(TODO|FIXME|HACK|XXX)\b/g
 
 let initialized = false
 const languages = new Map<string, Language>()
@@ -90,7 +96,15 @@ function cleanImport(text: string): string {
 }
 
 export default async function parseFile(task: ParseTask): Promise<ParseResult> {
-  const empty: ParseResult = { loc: 0, analyzed: false, imports: [], defs: [], refs: [] }
+  const empty: ParseResult = {
+    loc: 0,
+    analyzed: false,
+    cx: 0,
+    todoCount: 0,
+    imports: [],
+    defs: [],
+    refs: []
+  }
   let source: string
   try {
     source = await fs.readFile(task.absPath, 'utf8')
@@ -98,7 +112,8 @@ export default async function parseFile(task: ParseTask): Promise<ParseResult> {
     return empty
   }
   const loc = countLoc(source)
-  const base: ParseResult = { ...empty, loc }
+  const todoCount = (source.match(TODO_RE) ?? []).length
+  const base: ParseResult = { ...empty, loc, todoCount }
   if (!task.grammar) return base
   // skip minified/bundled artifacts: telltale filename or huge average line length
   if (/\.(min|bundle)\./.test(task.absPath) || source.length / Math.max(1, loc) > 250) {
@@ -116,10 +131,13 @@ export default async function parseFile(task: ParseTask): Promise<ParseResult> {
     const imports: string[] = []
     const defs: RawDef[] = []
     const refs: RawRef[] = []
+    let cx = 0
     for (const capture of query.captures(tree.rootNode)) {
       const name = capture.name
       const node = capture.node
-      if (name.startsWith('import.')) {
+      if (name === 'cx') {
+        cx++
+      } else if (name.startsWith('import.')) {
         imports.push(cleanImport(node.text))
       } else if (name.startsWith('def.')) {
         const kind = KIND_BY_CAPTURE[name]
@@ -138,7 +156,7 @@ export default async function parseFile(task: ParseTask): Promise<ParseResult> {
       }
     }
     tree.delete()
-    return { loc, analyzed: true, imports, defs, refs }
+    return { loc, analyzed: true, cx, todoCount, imports, defs, refs }
   } catch {
     return base
   }
