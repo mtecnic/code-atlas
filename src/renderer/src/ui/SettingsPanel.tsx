@@ -4,6 +4,7 @@ import { useAtlas } from '../store'
 export function SettingsPanel(): React.JSX.Element | null {
   const open = useAtlas((s) => s.settingsOpen)
   const llm = useAtlas((s) => s.llm)
+  const glInfo = useAtlas((s) => s.glInfo)
   const { setSettingsOpen, setLlm } = useAtlas()
   const [host, setHost] = useState('')
   const [status, setStatus] = useState<string>('')
@@ -118,6 +119,25 @@ export function SettingsPanel(): React.JSX.Element | null {
             {indexStatus && <p className="status">{indexStatus}</p>}
           </>
         )}
+        <h3>Renderer</h3>
+        <p className="hint">
+          {glInfo
+            ? `Active: ${glInfo.mode} — ${glInfo.renderer.slice(0, 60)}${glInfo.software ? ' (software)' : ''}`
+            : 'Detecting…'}{' '}
+          If the 3D view looks wrong (common over RDP/VNC), switch to Software. Relaunches the
+          app.
+        </p>
+        <div className="row">
+          <button className="btn" onClick={() => void window.atlas.setGlMode('default')}>
+            Auto
+          </button>
+          <button className="btn" onClick={() => void window.atlas.setGlMode('egl')}>
+            GPU (EGL)
+          </button>
+          <button className="btn" onClick={() => void window.atlas.setGlMode('swiftshader')}>
+            Software
+          </button>
+        </div>
         <h3>Live watch</h3>
         <label className="diff-check">
           <input

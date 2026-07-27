@@ -88,6 +88,7 @@ export default function App(): React.JSX.Element {
       llm: { streamChat },
       tourModule: import("./tour")
     }
+    const offGl = window.atlas.onGlInfo((info) => useAtlas.getState().setGlInfo(info))
     const offProgress = window.atlas.onProgress((p) => useAtlas.getState().setProgress(p))
     const offSnapshot = window.atlas.onSnapshot((s) => {
       const state = useAtlas.getState()
@@ -98,6 +99,7 @@ export default function App(): React.JSX.Element {
       if (s.llm) useAtlas.getState().setLlm(s.llm)
     })
     return () => {
+      offGl()
       offProgress()
       offSnapshot()
       sceneRef.current?.dispose()

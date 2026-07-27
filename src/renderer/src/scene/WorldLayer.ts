@@ -498,6 +498,24 @@ export class WorldLayer {
     this.windowStrength = v
   }
 
+  /** HiDPI compensation: 1px additive lines dim at high devicePixelRatio */
+  private lineBoost = 1
+  setLineBoost(f: number): void {
+    this.lineBoost = Math.max(1, f)
+    if (this.baseEdges) {
+      const m = this.baseEdges.material as THREE.LineBasicMaterial
+      m.opacity = Math.min(1, m.opacity * this.lineBoost)
+    }
+    if (this.arcLines) {
+      const m = this.arcLines.material as THREE.LineBasicMaterial
+      m.opacity = Math.min(1, 0.85 * this.lineBoost)
+    }
+    if (this.cycleArcs) {
+      const m = this.cycleArcs.material as THREE.LineBasicMaterial
+      m.opacity = Math.min(1, 0.55 * this.lineBoost)
+    }
+  }
+
   /** recolor + re-glow every building from a computed lens result */
   applyLens(colors: Float32Array, emissive: Float32Array, emissiveColor: string): void {
     if (!this.buildings || !this.snapshot) return

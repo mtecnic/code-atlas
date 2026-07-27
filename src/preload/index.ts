@@ -35,7 +35,11 @@ const api: AtlasApi = {
   cancelSummaries: () => ipcRenderer.invoke(CHANNELS.cancelSummaries),
   getSummaries: () => ipcRenderer.invoke(CHANNELS.getSummaries),
   saveScreenshot: (dataUrl: string) => ipcRenderer.invoke(CHANNELS.saveScreenshot, dataUrl),
+  setGlMode: (mode: 'default' | 'egl' | 'swiftshader') =>
+    ipcRenderer.invoke(CHANNELS.setGlMode, mode),
   onSummariesProgress: (cb) => subscribe<{ done: number; total: number }>(CHANNELS.summariesProgress, cb),
+  onGlInfo: (cb) =>
+    subscribe<{ mode: string; renderer: string; software: boolean }>(CHANNELS.glInfo, cb),
   onProgress: (cb) => subscribe<AnalysisProgress>(CHANNELS.analysisProgress, cb),
   onSnapshot: (cb) => subscribe<RepoSnapshot>(CHANNELS.analysisSnapshot, cb),
   onLlmChunk: (cb) => subscribe<LlmChunkPayload>(CHANNELS.llmChunk, cb),

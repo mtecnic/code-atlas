@@ -222,6 +222,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return out
   })
 
+  ipcMain.handle(CHANNELS.setGlMode, async (_e, mode: 'default' | 'egl' | 'swiftshader') => {
+    await saveSettings({ glMode: mode })
+    const args = process.argv.slice(1).filter((a) => !a.startsWith('--atlas-gl='))
+    app.relaunch({ args: [...args, `--atlas-gl=${mode}`] })
+    app.exit(0)
+  })
+
   ipcMain.handle(CHANNELS.getSettings, () => loadSettings())
   ipcMain.handle(CHANNELS.saveSettings, (_e, patch: Partial<AtlasSettings>) =>
     saveSettings(patch)

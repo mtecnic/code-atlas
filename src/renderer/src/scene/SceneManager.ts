@@ -111,11 +111,23 @@ export class SceneManager {
   private camStillFor = 0
   private nearLabelsFresh = false
 
+  private lowFx = false
+  private frameParity = 0
+
   constructor(private container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      powerPreference: 'high-performance'
-    })
+    try {
+      this.renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        powerPreference: 'high-performance'
+      })
+    } catch (err) {
+      // dead context: leave a notice; main's GL ladder will relaunch us
+      const notice = document.createElement('div')
+      notice.className = 'gl-notice'
+      notice.textContent = '3D unavailable — restarting with a compatible renderer…'
+      container.appendChild(notice)
+      throw err
+    }
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     container.appendChild(this.renderer.domElement)
@@ -374,6 +386,9 @@ export class SceneManager {
       if (state.healthOpen !== prev.healthOpen) {
         this.world.setCyclesVisible(state.healthOpen)
       }
+      if (state.glInfo !== prev.glInfo && state.glInfo) {
+        this.applyGlProfile(state.glInfo.software)
+      }
       if (state.fileFilter !== prev.fileFilter) {
         this.world.setFilter(state.fileFilter ? state.fileFilter.keep : null)
       }
@@ -411,6 +426,30 @@ export class SceneManager {
   setCameraMode(mode: 'orbit' | 'fly'): void {
     this.rig.setMode(mode)
     if (mode === 'fly') this.world.hideNearLabels()
+  }
+
+  /** software-GL profile: lower fill-rate cost; HiDPI line boost otherwise */
+  private applyGlProfile(software: boolean): void {
+    this.lowFx = software
+    if (software) {
+      this.renderer.setPixelRatio(1)
+      this.bloom.resolution.set(
+        Math.max(1, (this.container.clientWidth || 2) / 2),
+        Math.max(1, (this.container.clientHeight || 2) / 2)
+      )
+      // thin the ambient particles
+      const geo = this.particles.geometry
+      geo.setDrawRange(0, 500)
+    } else {
+      // real GPU: additive 1px lines lose apparent brightness at high DPR —
+      // compensate by boosting line opacities
+      const boost = Math.min(2, window.devicePixelRatio || 1)
+      this.world.setLineBoost(boost)
+    }
+    const w = this.container.clientWidth || 1
+    const h = this.container.clientHeight || 1
+    this.renderer.setSize(w, h)
+    this.composer.setSize(w, h)
   }
 
   /** frame the current view's bounds, preserving the viewing direction */
@@ -604,8 +643,9 @@ export class SceneManager {
     this.renderer.setScissorTest(false)
     this.composer.render()
 
-    // minimap overlay (skip in molecule view)
-    if (state.snapshot && state.mode !== 'molecule') {
+    // minimap overlay (skip in molecule view; half-rate under software GL)
+    this.frameParity ^= 1
+    if (state.snapshot && state.mode !== 'molecule' && !(this.lowFx && this.frameParity)) {
       const mw = Math.min(230, w * 0.22)
       const mh = mw
       const mx = w - mw - 14

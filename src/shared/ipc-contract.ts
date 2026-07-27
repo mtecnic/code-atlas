@@ -29,6 +29,7 @@ export const CHANNELS = {
   cancelSummaries: 'atlas:cancel-summaries',
   getSummaries: 'atlas:get-summaries',
   saveScreenshot: 'atlas:save-screenshot',
+  setGlMode: 'atlas:set-gl-mode',
   // main → renderer (send)
   analysisProgress: 'atlas:analysis-progress',
   analysisSnapshot: 'atlas:analysis-snapshot',
@@ -36,7 +37,8 @@ export const CHANNELS = {
   llmDone: 'atlas:llm-done',
   llmError: 'atlas:llm-error',
   llmToolCall: 'atlas:llm-tool-call',
-  summariesProgress: 'atlas:summaries-progress'
+  summariesProgress: 'atlas:summaries-progress',
+  glInfo: 'atlas:gl-info'
 } as const
 
 export interface AtlasSettings {
@@ -45,6 +47,7 @@ export interface AtlasSettings {
   maxFiles?: number
   recentRepos?: string[]
   watch?: boolean
+  glMode?: 'default' | 'egl' | 'swiftshader'
   bookmarks?: Record<string, { name: string; pos: number[]; target: number[] }[]>
 }
 
@@ -90,7 +93,10 @@ export interface AtlasApi {
   getSummaries(): Promise<Record<string, string>>
   /** save a data-URL PNG via the native save dialog */
   saveScreenshot(dataUrl: string): Promise<boolean>
+  /** persist a renderer mode and relaunch the app into it */
+  setGlMode(mode: 'default' | 'egl' | 'swiftshader'): Promise<void>
   onSummariesProgress(cb: (p: { done: number; total: number }) => void): () => void
+  onGlInfo(cb: (info: { mode: string; renderer: string; software: boolean }) => void): () => void
   onProgress(cb: (p: AnalysisProgress) => void): () => void
   onSnapshot(cb: (s: RepoSnapshot) => void): () => void
   onLlmChunk(cb: (c: LlmChunkPayload) => void): () => void

@@ -1,11 +1,53 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
-import { statSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerIpc } from './ipc'
+import { saveSettings } from './store'
+import { CHANNELS } from '../shared/ipc-contract'
 
 let mainWindow: BrowserWindow | null = null
+
+// ---- GL mode ladder: default → egl (ANGLE straight to the GPU driver, works
+// without X acceleration, e.g. under xrdp/RDP) → swiftshader (software, always
+// correct). Chosen mode is health-probed after load; failures relaunch with
+// the next rung. Last-good mode persists in settings.
+type GlMode = 'default' | 'egl' | 'swiftshader'
+const GL_LADDER: GlMode[] = ['default', 'egl', 'swiftshader']
+
+function savedGlMode(): GlMode | null {
+  try {
+    const raw = readFileSync(join(app.getPath('userData'), 'settings.json'), 'utf8')
+    const mode = JSON.parse(raw).glMode
+    return GL_LADDER.includes(mode) ? mode : null
+  } catch {
+    return null
+  }
+}
+
+const glArgv = process.argv.find((a) => a.startsWith('--atlas-gl='))
+const glMode: GlMode = (() => {
+  const fromArg = glArgv?.split('=')[1] as GlMode | undefined
+  if (fromArg && GL_LADDER.includes(fromArg)) return fromArg
+  return savedGlMode() ?? 'default'
+})()
+if (glMode === 'egl') {
+  app.commandLine.appendSwitch('use-angle', 'gl-egl')
+} else if (glMode === 'swiftshader') {
+  app.commandLine.appendSwitch('enable-unsafe-swiftshader')
+}
+
+const GL_PROBE_JS = `(() => { try {
+  const c = document.createElement('canvas'); c.width = 4; c.height = 4;
+  const gl = c.getContext('webgl2') || c.getContext('webgl');
+  if (!gl) return { ok: false, renderer: 'no-context' };
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer = String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+  gl.clearColor(1, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+  const px = new Uint8Array(4); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  return { ok: px[0] > 200 && px[1] < 60, renderer };
+} catch (e) { return { ok: false, renderer: String(e) } } })()`
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -25,6 +67,45 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => mainWindow?.show())
   mainWindow.on('closed', () => (mainWindow = null))
+
+  // GL health probe → heal by relaunching one rung down the ladder
+  mainWindow.webContents.once('did-finish-load', () => {
+    void (async () => {
+      let probe: { ok: boolean; renderer: string }
+      try {
+        probe = (await mainWindow!.webContents.executeJavaScript(GL_PROBE_JS)) as {
+          ok: boolean
+          renderer: string
+        }
+      } catch (e) {
+        probe = { ok: false, renderer: String(e) }
+      }
+      console.log(`[atlas] gl: ${glMode} — ${probe.renderer} ${probe.ok ? 'OK' : 'FAILED'}`)
+      if (probe.ok) {
+        void saveSettings({ glMode })
+        if (!mainWindow!.isDestroyed()) {
+          mainWindow!.webContents.send(CHANNELS.glInfo, {
+            mode: glMode,
+            renderer: probe.renderer,
+            software: /swiftshader|llvmpipe|softpipe|software/i.test(probe.renderer)
+          })
+        }
+        return
+      }
+      const next = GL_LADDER[GL_LADDER.indexOf(glMode) + 1]
+      if (next) {
+        console.log(`[atlas] gl: relaunching with --atlas-gl=${next}`)
+        const args = process.argv.slice(1).filter((a) => !a.startsWith('--atlas-gl='))
+        app.relaunch({ args: [...args, `--atlas-gl=${next}`] })
+        app.exit(0)
+      } else {
+        dialog.showErrorBox(
+          'Code Atlas',
+          `WebGL could not be initialized in any mode (last: ${probe.renderer}).`
+        )
+      }
+    })()
+  })
 
   // dev/test hooks, sequential pipeline:
   //   load → [ATLAS_OPEN: analyze + wait for snapshot] → [ATLAS_MODE] →

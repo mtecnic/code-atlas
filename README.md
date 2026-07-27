@@ -86,6 +86,8 @@ sudo dpkg -i dist/code-atlas_*_arm64.deb
 
 > Analysis quality is best on a git repository (churn heat + timeline need history), but any plain folder works.
 
+> **Remote desktop (RDP / VNC / xrdp):** these sessions usually lack GPU-accelerated GL. Code Atlas detects a broken WebGL context at startup and automatically relaunches itself into a working renderer (GPU-over-EGL first, then software). If the view still looks off, pick **Settings → Renderer → Software**. Software rendering is fully correct, just slower — a physical display gives the full effect.
+
 ### Hook up a local LLM
 
 Open **⚙ Settings**, type an IP or host (port optional — common ports are probed automatically), hit **Detect**. That's it. vLLM, llama.cpp's `llama-server`, LM Studio and Ollama are all recognized; pick a model from the dropdown and the **✨ Explain** button and **💬 Ask AI** chat go live.
