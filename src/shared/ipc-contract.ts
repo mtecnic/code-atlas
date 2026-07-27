@@ -25,13 +25,17 @@ export const CHANNELS = {
   getSettings: 'atlas:get-settings',
   saveSettings: 'atlas:save-settings',
   loadLcov: 'atlas:load-lcov',
+  buildSummaries: 'atlas:build-summaries',
+  cancelSummaries: 'atlas:cancel-summaries',
+  getSummaries: 'atlas:get-summaries',
   // main → renderer (send)
   analysisProgress: 'atlas:analysis-progress',
   analysisSnapshot: 'atlas:analysis-snapshot',
   llmChunk: 'atlas:llm-chunk',
   llmDone: 'atlas:llm-done',
   llmError: 'atlas:llm-error',
-  llmToolCall: 'atlas:llm-tool-call'
+  llmToolCall: 'atlas:llm-tool-call',
+  summariesProgress: 'atlas:summaries-progress'
 } as const
 
 export interface AtlasSettings {
@@ -76,6 +80,11 @@ export interface AtlasApi {
   saveSettings(patch: Partial<AtlasSettings>): Promise<AtlasSettings>
   /** open an lcov file; returns per-FileId coverage 0..1 (-1 = no data), or null if canceled */
   loadLcov(): Promise<{ coverage: number[]; coveredFiles: number } | null>
+  /** build the AI search index (one-line file summaries, cached by content hash) */
+  buildSummaries(): Promise<{ built: number; cached: number; total: number } | { error: string }>
+  cancelSummaries(): Promise<void>
+  getSummaries(): Promise<Record<string, string>>
+  onSummariesProgress(cb: (p: { done: number; total: number }) => void): () => void
   onProgress(cb: (p: AnalysisProgress) => void): () => void
   onSnapshot(cb: (s: RepoSnapshot) => void): () => void
   onLlmChunk(cb: (c: LlmChunkPayload) => void): () => void

@@ -8,6 +8,28 @@ export function SettingsPanel(): React.JSX.Element | null {
   const [host, setHost] = useState('')
   const [status, setStatus] = useState<string>('')
   const [probing, setProbing] = useState(false)
+  const [indexBusy, setIndexBusy] = useState(false)
+  const [indexProgress, setIndexProgress] = useState('')
+  const [indexStatus, setIndexStatus] = useState('')
+
+  useEffect(() => {
+    const off = window.atlas.onSummariesProgress(({ done, total }) =>
+      setIndexProgress(`${done}/${total}`)
+    )
+    return off
+  }, [])
+
+  const buildIndex = async (): Promise<void> => {
+    setIndexBusy(true)
+    setIndexStatus('')
+    const result = await window.atlas.buildSummaries()
+    setIndexBusy(false)
+    if ('error' in result) setIndexStatus(`✗ ${result.error}`)
+    else
+      setIndexStatus(
+        `✓ ${result.built} summarized, ${result.cached} already cached, of ${result.total} candidates`
+      )
+  }
 
   useEffect(() => {
     if (open && llm) setHost(llm.baseUrl.replace(/^https?:\/\//, ''))
@@ -69,6 +91,26 @@ export function SettingsPanel(): React.JSX.Element | null {
                 </option>
               ))}
             </select>
+            <h3>AI search index</h3>
+            <p className="hint">
+              One-line summaries per file power meaning-based search (Ctrl+K). Cached by content
+              hash — rebuilding only summarizes changed files.
+            </p>
+            <div className="row">
+              <button
+                className="btn accent"
+                disabled={indexBusy}
+                onClick={() => void buildIndex()}
+              >
+                {indexBusy ? `Indexing… ${indexProgress}` : '🧠 Build index'}
+              </button>
+              {indexBusy && (
+                <button className="btn" onClick={() => void window.atlas.cancelSummaries()}>
+                  Stop
+                </button>
+              )}
+            </div>
+            {indexStatus && <p className="status">{indexStatus}</p>}
           </>
         )}
         <div className="dialog-footer">

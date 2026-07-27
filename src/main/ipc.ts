@@ -11,6 +11,7 @@ import type { AtlasSettings } from '../shared/ipc-contract'
 import type { FileId, LlmChatMessage } from '../shared/model'
 import { analysisStore, loadSettings, saveSettings } from './store'
 import { probeEndpoint } from './llm/probe'
+import { buildSummaries, cancelSummaries, loadSummaryCache } from './llm/summaries'
 import { abortChat, resolveToolResult, startChat } from './llm/chat'
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
@@ -169,6 +170,20 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       }
     }
     return { coverage, coveredFiles }
+  })
+
+  ipcMain.handle(CHANNELS.buildSummaries, async (e) => {
+    const settings = await loadSettings()
+    if (!settings.llm) return { error: 'No LLM endpoint configured' }
+    return buildSummaries(e.sender, settings.llm)
+  })
+  ipcMain.handle(CHANNELS.cancelSummaries, () => cancelSummaries())
+  ipcMain.handle(CHANNELS.getSummaries, async () => {
+    if (!analysisStore.rootPath) return {}
+    const cache = await loadSummaryCache(analysisStore.rootPath)
+    const out: Record<string, string> = {}
+    for (const [p2, entry] of Object.entries(cache)) out[p2] = entry.summary
+    return out
   })
 
   ipcMain.handle(CHANNELS.getSettings, () => loadSettings())
