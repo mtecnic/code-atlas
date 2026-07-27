@@ -2,6 +2,7 @@ import { useAtlas } from '../store'
 import type { ViewMode } from '../store'
 import { enterMoleculeFor } from '../molecule'
 import { LENSES, type LensId } from '../lenses'
+import { startTour } from '../tour'
 
 const MODES: { id: ViewMode; label: string; icon: string }[] = [
   { id: 'city', label: 'City', icon: '🏙' },
@@ -135,6 +136,14 @@ export function Toolbar({
       </button>
       <button className="btn" disabled={!snapshot} onClick={() => setChatOpen(true)}>
         💬 Ask AI
+      </button>
+      <button
+        className="btn"
+        disabled={!snapshot}
+        title="AI-guided architecture tour"
+        onClick={() => void startTour()}
+      >
+        🎓 Tour
       </button>
       <button className="btn" onClick={() => setSettingsOpen(true)}>
         ⚙️

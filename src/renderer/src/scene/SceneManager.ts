@@ -363,6 +363,22 @@ export class SceneManager {
       if (state.fileFilter !== prev.fileFilter) {
         this.world.setFilter(state.fileFilter ? state.fileFilter.keep : null)
       }
+      if (
+        state.tour &&
+        state.tour.current >= 0 &&
+        (state.tour.current !== prev.tour?.current || (prev.tour?.stops.length ?? 0) === 0)
+      ) {
+        const stop = state.tour.stops[state.tour.current]
+        if (stop) {
+          if (stop.fileId >= 0) {
+            state.setSelected(stop.fileId)
+            this.rig.flyTo(this.world.currentTop(stop.fileId), this.world.focusDistance(stop.fileId))
+          } else if (stop.dirId >= 0) {
+            const b = this.world.dirBounds(stop.dirId)
+            if (b) this.rig.frameSphere(b.center, b.radius, { duration: 1.4 })
+          }
+        }
+      }
     })
 
     // dev/test hook for scripted verification

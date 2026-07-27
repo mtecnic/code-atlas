@@ -578,6 +578,22 @@ export class WorldLayer {
     return { center: new THREE.Vector3(mx, my, mz), radius }
   }
 
+  /** bounding sphere of one directory's city platform (for tour framing) */
+  dirBounds(dirId: number): { center: THREE.Vector3; radius: number } | null {
+    if (!this.cityLayout || !this.snapshot?.dirs[dirId]) return null
+    const i3 = dirId * 3
+    const w = this.cityLayout.dirScale[i3]
+    const d = this.cityLayout.dirScale[i3 + 2]
+    return {
+      center: new THREE.Vector3(
+        this.cityLayout.dirPos[i3],
+        this.cityLayout.dirPos[i3 + 1] + 20,
+        this.cityLayout.dirPos[i3 + 2]
+      ),
+      radius: Math.max(40, Math.sqrt(w * w + d * d) / 2)
+    }
+  }
+
   /** pleasant fly-to distance for one file, from its target footprint */
   focusDistance(fileId: FileId): number {
     const i3 = fileId * 3

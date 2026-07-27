@@ -13,6 +13,8 @@ import { Legend } from './ui/Legend'
 import { FindingsPanel } from './ui/FindingsPanel'
 import { Inspector } from './ui/Inspector'
 import { ContextMenu } from './ui/ContextMenu'
+import { TourCard } from './ui/TourCard'
+import { stopTour } from './tour'
 import { analyzeHealth } from './analysis/graph-health'
 import * as graphops from './graphops'
 import { streamChat } from './llm'
@@ -67,7 +69,8 @@ export default function App(): React.JSX.Element {
     ;(window as unknown as Record<string, unknown>).__atlasDebug = {
       store: useAtlas,
       graphops,
-      llm: { streamChat }
+      llm: { streamChat },
+      tourModule: import("./tour")
     }
     const offProgress = window.atlas.onProgress((p) => useAtlas.getState().setProgress(p))
     const offSnapshot = window.atlas.onSnapshot((s) => {
@@ -100,6 +103,7 @@ export default function App(): React.JSX.Element {
       const typing = (e.target as HTMLElement)?.tagName === 'INPUT'
       if (e.key === 'Escape') {
         if (state.contextMenu) state.setContextMenu(null)
+        else if (state.tour) stopTour()
         else if (state.searchOpen) state.setSearchOpen(false)
         else if (state.settingsOpen) state.setSettingsOpen(false)
         else if (state.fileFilter) state.setFileFilter(null)
@@ -148,6 +152,7 @@ export default function App(): React.JSX.Element {
       <SearchPalette />
       <SettingsPanel />
       <ContextMenu />
+      <TourCard />
       {cameraMode === 'fly' && (
         <div className="fly-hint">WASD move · QE up/down · Shift boost · Esc exit fly mode</div>
       )}

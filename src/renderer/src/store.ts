@@ -47,6 +47,12 @@ interface AtlasState {
   contextMenu: { fileId: FileId; x: number; y: number } | null
   /** active graph-ops filter (keep array consumed by the scene) */
   fileFilter: { keep: Float32Array; label: string } | null
+  tour: {
+    stops: { fileId: number; dirId: number; title: string; narration: string }[]
+    current: number
+    playing: boolean
+    done: boolean
+  } | null
 
   setSnapshot(s: RepoSnapshot): void
   setProgress(p: AnalysisProgress): void
@@ -69,6 +75,7 @@ interface AtlasState {
   setHealthOpen(v: boolean): void
   setContextMenu(m: { fileId: FileId; x: number; y: number } | null): void
   setFileFilter(f: { keep: Float32Array; label: string } | null): void
+  setTour(t: AtlasState['tour']): void
 }
 
 export const useAtlas = create<AtlasState>((set) => ({
@@ -94,6 +101,7 @@ export const useAtlas = create<AtlasState>((set) => ({
   healthOpen: false,
   contextMenu: null,
   fileFilter: null,
+  tour: null,
 
   setSnapshot: (snapshot) =>
     set({ snapshot, selected: null, hover: null, timeIndex: -1, moleculeFile: null, moleculeGraph: null, mode: 'city' }),
@@ -117,5 +125,6 @@ export const useAtlas = create<AtlasState>((set) => ({
   setHealth: (health) => set({ health }),
   setHealthOpen: (healthOpen) => set({ healthOpen }),
   setContextMenu: (contextMenu) => set({ contextMenu }),
-  setFileFilter: (fileFilter) => set({ fileFilter })
+  setFileFilter: (fileFilter) => set({ fileFilter }),
+  setTour: (tour) => set({ tour })
 }))
