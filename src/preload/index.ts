@@ -19,6 +19,8 @@ const api: AtlasApi = {
   analyze: (rootPath: string) => ipcRenderer.invoke(CHANNELS.analyze, rootPath),
   cancelAnalysis: () => ipcRenderer.invoke(CHANNELS.cancelAnalysis),
   readFile: (fileId: FileId) => ipcRenderer.invoke(CHANNELS.readFile, fileId),
+  writeFile: (fileId: FileId, content: string) =>
+    ipcRenderer.invoke(CHANNELS.writeFile, fileId, content),
   getModuleGraph: (fileIds: FileId[]) => ipcRenderer.invoke(CHANNELS.getModuleGraph, fileIds),
   llmProbe: (host: string, port?: number) => ipcRenderer.invoke(CHANNELS.llmProbe, host, port),
   llmChat: (messages: LlmChatMessage[], tools?: Record<string, unknown>[]) =>

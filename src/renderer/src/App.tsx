@@ -3,7 +3,7 @@ import { useAtlas } from './store'
 import { SceneManager } from './scene/SceneManager'
 import { Toolbar } from './ui/Toolbar'
 import { SearchPalette } from './ui/SearchPalette'
-import { CodePreview } from './ui/CodePreview'
+import { EditorPanel } from './ui/EditorPanel'
 import { ChatPanel } from './ui/ChatPanel'
 import { SettingsPanel } from './ui/SettingsPanel'
 import { Timeline } from './ui/Timeline'
@@ -145,7 +145,7 @@ export default function App(): React.JSX.Element {
       <HudStats />
       <Legend />
       <Timeline />
-      <CodePreview />
+      <EditorPanel />
       <Inspector />
       <FindingsPanel />
       <ChatPanel />

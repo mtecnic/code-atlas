@@ -1,9 +1,14 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { promises as fs } from 'node:fs'
+import path from 'node:path'
+import { grammarFor } from '../shared/languages'
+import { analyze, cancelAnalysis, grammarDir } from './analyzer/analyzer'
+import parseSingle from './analyzer/parse-worker'
+
+const backedUp = new Set<string>()
 import { CHANNELS } from '../shared/ipc-contract'
 import type { AtlasSettings } from '../shared/ipc-contract'
 import type { FileId, LlmChatMessage } from '../shared/model'
-import { analyze, cancelAnalysis } from './analyzer/analyzer'
 import { analysisStore, loadSettings, saveSettings } from './store'
 import { probeEndpoint } from './llm/probe'
 import { abortChat, resolveToolResult, startChat } from './llm/chat'
@@ -49,6 +54,53 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       return buf.length > 512 * 1024 ? buf.slice(0, 512 * 1024) + '\n… (truncated)' : buf
     } catch {
       return null
+    }
+  })
+
+  ipcMain.handle(CHANNELS.writeFile, async (_e, fileId: FileId, content: string) => {
+    const abs = analysisStore.absPathOf(fileId)
+    const snapshot = analysisStore.snapshot
+    const root = analysisStore.rootPath
+    if (!abs || !snapshot || !root) return { ok: false, error: 'no file' }
+    const resolvedRoot = path.resolve(root) + path.sep
+    if (!path.resolve(abs).startsWith(resolvedRoot)) {
+      return { ok: false, error: 'path escapes repository root' }
+    }
+    try {
+      // one backup per file per session, stashed under userData
+      if (!backedUp.has(abs)) {
+        const backupDir = path.join(app.getPath('userData'), 'backups')
+        await fs.mkdir(backupDir, { recursive: true })
+        const safe = snapshot.files[fileId].path.split('/').join('__')
+        await fs.copyFile(abs, path.join(backupDir, `${Date.now()}-${safe}`)).catch(() => {})
+        backedUp.add(abs)
+      }
+      await fs.writeFile(abs, content, 'utf8')
+      // single-file re-parse to refresh metrics + symbols
+      const file = snapshot.files[fileId]
+      const result = await parseSingle({
+        absPath: abs,
+        language: file.language,
+        grammar: grammarFor(file.language),
+        grammarDir: grammarDir()
+      })
+      file.loc = result.loc
+      file.complexity = result.cx
+      file.todoCount = result.todoCount
+      file.analyzed = result.analyzed
+      file.symbolCount = result.defs.length
+      if (result.analyzed) {
+        analysisStore.extractions.set(fileId, { defs: result.defs, refs: result.refs })
+      }
+      return {
+        ok: true,
+        loc: result.loc,
+        complexity: result.cx,
+        todoCount: result.todoCount,
+        symbolCount: result.defs.length
+      }
+    } catch (err) {
+      return { ok: false, error: String(err) }
     }
   })
 

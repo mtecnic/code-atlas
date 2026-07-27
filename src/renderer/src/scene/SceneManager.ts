@@ -363,6 +363,12 @@ export class SceneManager {
       if (state.fileFilter !== prev.fileFilter) {
         this.world.setFilter(state.fileFilter ? state.fileFilter.keep : null)
       }
+      if (state.fileVersion !== prev.fileVersion && state.fileVersion && state.snapshot) {
+        this.world.fileEdited(
+          state.fileVersion.fileId,
+          state.snapshot.files[state.fileVersion.fileId].loc
+        )
+      }
       if (
         state.tour &&
         state.tour.current >= 0 &&

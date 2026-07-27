@@ -594,6 +594,20 @@ export class WorldLayer {
     }
   }
 
+  /** after an edit: rescale the building to its new loc and flash it */
+  fileEdited(fileId: FileId, newLoc: number): void {
+    if (!this.snapshot || !this.cityLayout) return
+    const i3 = fileId * 3
+    const maxLoc = this.snapshot.files.reduce((m, f) => Math.max(m, f.loc), 1)
+    const height = 2 + (Math.sqrt(Math.max(1, newLoc)) / Math.sqrt(maxLoc)) * 120
+    if (this.mode === 'city') {
+      this.cityLayout.fileScale[i3 + 1] = height
+      this.tgtScale[i3 + 1] = height
+    }
+    this.glow[fileId] = 2.2 // flash; smoothing decays it toward glowTarget
+    this.settled = false
+  }
+
   /** pleasant fly-to distance for one file, from its target footprint */
   focusDistance(fileId: FileId): number {
     const i3 = fileId * 3

@@ -53,6 +53,8 @@ interface AtlasState {
     playing: boolean
     done: boolean
   } | null
+  /** bumped after an in-place edit of snapshot.files[...] (save → re-parse) */
+  fileVersion: { fileId: FileId; version: number } | null
 
   setSnapshot(s: RepoSnapshot): void
   setProgress(p: AnalysisProgress): void
@@ -76,6 +78,11 @@ interface AtlasState {
   setContextMenu(m: { fileId: FileId; x: number; y: number } | null): void
   setFileFilter(f: { keep: Float32Array; label: string } | null): void
   setTour(t: AtlasState['tour']): void
+  /** patch a file's metrics in place and notify the scene */
+  bumpFileVersion(
+    fileId: FileId,
+    patch: { loc: number; complexity: number; todoCount: number; symbolCount: number }
+  ): void
 }
 
 export const useAtlas = create<AtlasState>((set) => ({
@@ -102,6 +109,7 @@ export const useAtlas = create<AtlasState>((set) => ({
   contextMenu: null,
   fileFilter: null,
   tour: null,
+  fileVersion: null,
 
   setSnapshot: (snapshot) =>
     set({ snapshot, selected: null, hover: null, timeIndex: -1, moleculeFile: null, moleculeGraph: null, mode: 'city' }),
@@ -126,5 +134,10 @@ export const useAtlas = create<AtlasState>((set) => ({
   setHealthOpen: (healthOpen) => set({ healthOpen }),
   setContextMenu: (contextMenu) => set({ contextMenu }),
   setFileFilter: (fileFilter) => set({ fileFilter }),
-  setTour: (tour) => set({ tour })
+  setTour: (tour) => set({ tour }),
+  bumpFileVersion: (fileId, patch) =>
+    set((s) => {
+      if (s.snapshot) Object.assign(s.snapshot.files[fileId], patch)
+      return { fileVersion: { fileId, version: (s.fileVersion?.version ?? 0) + 1 } }
+    })
 }))

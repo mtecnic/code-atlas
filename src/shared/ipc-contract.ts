@@ -16,6 +16,7 @@ export const CHANNELS = {
   analyze: 'atlas:analyze',
   cancelAnalysis: 'atlas:cancel-analysis',
   readFile: 'atlas:read-file',
+  writeFile: 'atlas:write-file',
   getModuleGraph: 'atlas:get-module-graph',
   llmProbe: 'atlas:llm-probe',
   llmChat: 'atlas:llm-chat',
@@ -57,6 +58,14 @@ export interface AtlasApi {
   analyze(rootPath: string): Promise<void>
   cancelAnalysis(): Promise<void>
   readFile(fileId: FileId): Promise<string | null>
+  /** save edited content; re-parses the file and returns refreshed metrics */
+  writeFile(
+    fileId: FileId,
+    content: string
+  ): Promise<
+    | { ok: true; loc: number; complexity: number; todoCount: number; symbolCount: number }
+    | { ok: false; error: string }
+  >
   getModuleGraph(fileIds: FileId[]): Promise<ModuleGraph>
   llmProbe(host: string, port?: number): Promise<LlmProbeResult>
   /** start a chat; optional OpenAI tool schemas enable the scene-agent loop */
