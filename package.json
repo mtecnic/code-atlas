@@ -19,7 +19,8 @@
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
     "build:linux": "electron-vite build && electron-builder --linux",
-    "grammars": "node scripts/fetch-grammars.mjs"
+    "grammars": "node scripts/fetch-grammars.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@codemirror/commands": "^6.10.4",
@@ -79,7 +80,8 @@
     "tree-sitter-rust": "^0.24.0",
     "tree-sitter-typescript": "^0.23.2",
     "typescript": "^5.9.3",
-    "vite": "^7.2.6"
+    "vite": "^7.2.6",
+    "vitest": "^4.1.10"
   },
   "license": "MIT",
   "repository": {

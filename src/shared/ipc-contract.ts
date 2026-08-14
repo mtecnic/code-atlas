@@ -37,6 +37,8 @@ export const CHANNELS = {
   llmDone: 'atlas:llm-done',
   llmError: 'atlas:llm-error',
   llmToolCall: 'atlas:llm-tool-call',
+  llmToolDone: 'atlas:llm-tool-done',
+  llmRetry: 'atlas:llm-retry',
   summariesProgress: 'atlas:summaries-progress',
   glInfo: 'atlas:gl-info'
 } as const
@@ -48,6 +50,8 @@ export interface AtlasSettings {
   recentRepos?: string[]
   watch?: boolean
   glMode?: 'default' | 'egl' | 'swiftshader'
+  /** prompt-token threshold for chat receipt-compaction (0 = off) */
+  contextBudget?: number
   bookmarks?: Record<string, { name: string; pos: number[]; target: number[] }[]>
 }
 
@@ -82,7 +86,7 @@ export interface AtlasApi {
   /** start a chat; optional OpenAI tool schemas enable the scene-agent loop */
   llmChat(messages: LlmChatMessage[], tools?: Record<string, unknown>[]): Promise<string>
   llmAbort(requestId: string): Promise<void>
-  llmToolResult(requestId: string, callId: string, result: string): Promise<void>
+  llmToolResult(requestId: string, callId: string, result: string, isError?: boolean): Promise<void>
   getSettings(): Promise<AtlasSettings>
   saveSettings(patch: Partial<AtlasSettings>): Promise<AtlasSettings>
   /** open an lcov file; returns per-FileId coverage 0..1 (-1 = no data), or null if canceled */
@@ -103,4 +107,10 @@ export interface AtlasApi {
   onLlmDone(cb: (requestId: string) => void): () => void
   onLlmError(cb: (requestId: string, error: string) => void): () => void
   onLlmToolCall(cb: (c: LlmToolCallPayload) => void): () => void
+  onLlmToolDone(
+    cb: (c: { requestId: string; callId: string; name: string; isError: boolean }) => void
+  ): () => void
+  onLlmRetry(
+    cb: (c: { requestId: string; attempt: number; max: number; reason: string }) => void
+  ): () => void
 }

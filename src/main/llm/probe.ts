@@ -1,6 +1,6 @@
 // Auto-detects a local LLM serving stack from a bare IP/host: tries Ollama's
 // native API and OpenAI-compatible /v1/models across common ports.
-import type { LlmEndpoint, LlmProbeResult } from '../../shared/model'
+import type { LlmEndpoint, LlmProbeResult, PreflightResult } from '../../shared/model'
 
 const OPENAI_PORTS = [8000, 8080, 1234, 5000, 80]
 const OLLAMA_PORT = 11434
@@ -62,6 +62,57 @@ export async function probeEndpoint(host: string, port?: number): Promise<LlmPro
   const results = await Promise.all(attempts)
   const openaiHit = results.find((r) => r?.style === 'openai')
   const hit = openaiHit ?? results.find((r) => r !== null)
-  if (hit) return { ok: true, endpoint: hit, tried }
+  if (hit) {
+    const preflight = await preflightEndpoint(hit)
+    return { ok: true, endpoint: hit, tried, preflight }
+  }
   return { ok: false, tried, error: `No LLM endpoint found at ${hostOnly} (tried ${tried.length} URLs)` }
+}
+
+/**
+ * A model listing proves the server is up — not that chat works. Send a real
+ * 1-token completion and classify failures into actionable categories.
+ */
+export async function preflightEndpoint(endpoint: LlmEndpoint): Promise<PreflightResult> {
+  const isOpenAi = endpoint.style === 'openai'
+  const url = isOpenAi
+    ? `${endpoint.baseUrl}/v1/chat/completions`
+    : `${endpoint.baseUrl}/api/chat`
+  const body = isOpenAi
+    ? { model: endpoint.model, messages: [{ role: 'user', content: 'ping' }], max_tokens: 1, stream: false }
+    : { model: endpoint.model, messages: [{ role: 'user', content: 'ping' }], stream: false, options: { num_predict: 1 } }
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(20_000)
+    })
+    if (res.ok) return { ok: true, category: 'ok', message: 'Chat completion verified' }
+    const text = (await res.text().catch(() => '')).slice(0, 300)
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, category: 'auth_rejected', message: 'Credentials rejected — check API key' }
+    }
+    if (res.status === 404 || /model.*(not|no).*(found|exist|loaded)|does not exist/i.test(text)) {
+      return {
+        ok: false,
+        category: 'unsupported_model',
+        message: `Model "${endpoint.model}" not available at this endpoint`
+      }
+    }
+    if (res.status === 429 && /quota|billing|exceeded your/i.test(text)) {
+      return { ok: false, category: 'quota_exhausted', message: 'Provider quota exhausted' }
+    }
+    return {
+      ok: false,
+      category: 'unknown_error',
+      message: `Chat ping failed: HTTP ${res.status}${text ? ` — ${text.slice(0, 120)}` : ''}`
+    }
+  } catch (e) {
+    return {
+      ok: false,
+      category: 'network_failure',
+      message: `Could not reach chat endpoint: ${String(e instanceof Error ? e.message : e).slice(0, 120)}`
+    }
+  }
 }

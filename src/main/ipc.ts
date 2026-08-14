@@ -156,13 +156,15 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     async (e, messages: LlmChatMessage[], tools?: Record<string, unknown>[]) => {
       const settings = await loadSettings()
       if (!settings.llm) throw new Error('No LLM endpoint configured')
-      return startChat(e.sender, settings.llm, messages, tools)
+      return startChat(e.sender, settings.llm, messages, tools, settings.contextBudget)
     }
   )
 
   ipcMain.handle(CHANNELS.llmAbort, (_e, requestId: string) => abortChat(requestId))
-  ipcMain.handle(CHANNELS.llmToolResult, (_e, requestId: string, callId: string, result: string) =>
-    resolveToolResult(requestId, callId, result)
+  ipcMain.handle(
+    CHANNELS.llmToolResult,
+    (_e, requestId: string, callId: string, result: string, isError?: boolean) =>
+      resolveToolResult(requestId, callId, result, isError)
   )
 
   ipcMain.handle(CHANNELS.loadLcov, async () => {

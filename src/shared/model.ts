@@ -129,11 +129,27 @@ export interface LlmEndpoint {
   model: string // selected
 }
 
+export type PreflightCategory =
+  | 'ok'
+  | 'auth_rejected'
+  | 'unsupported_model'
+  | 'quota_exhausted'
+  | 'network_failure'
+  | 'unknown_error'
+
+export interface PreflightResult {
+  ok: boolean
+  category: PreflightCategory
+  message: string
+}
+
 export interface LlmProbeResult {
   ok: boolean
   endpoint?: LlmEndpoint
   tried: string[]
   error?: string
+  /** result of a real 1-token chat completion against the chosen endpoint */
+  preflight?: PreflightResult
 }
 
 export interface LlmChatMessage {

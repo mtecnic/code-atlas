@@ -26,8 +26,8 @@ const api: AtlasApi = {
   llmChat: (messages: LlmChatMessage[], tools?: Record<string, unknown>[]) =>
     ipcRenderer.invoke(CHANNELS.llmChat, messages, tools),
   llmAbort: (requestId: string) => ipcRenderer.invoke(CHANNELS.llmAbort, requestId),
-  llmToolResult: (requestId: string, callId: string, result: string) =>
-    ipcRenderer.invoke(CHANNELS.llmToolResult, requestId, callId, result),
+  llmToolResult: (requestId: string, callId: string, result: string, isError?: boolean) =>
+    ipcRenderer.invoke(CHANNELS.llmToolResult, requestId, callId, result, isError),
   getSettings: () => ipcRenderer.invoke(CHANNELS.getSettings),
   saveSettings: (patch: Partial<AtlasSettings>) => ipcRenderer.invoke(CHANNELS.saveSettings, patch),
   loadLcov: () => ipcRenderer.invoke(CHANNELS.loadLcov),
@@ -54,7 +54,17 @@ const api: AtlasApi = {
     ipcRenderer.on(CHANNELS.llmError, listener)
     return () => ipcRenderer.removeListener(CHANNELS.llmError, listener)
   },
-  onLlmToolCall: (cb) => subscribe<LlmToolCallPayload>(CHANNELS.llmToolCall, cb)
+  onLlmToolCall: (cb) => subscribe<LlmToolCallPayload>(CHANNELS.llmToolCall, cb),
+  onLlmToolDone: (cb) =>
+    subscribe<{ requestId: string; callId: string; name: string; isError: boolean }>(
+      CHANNELS.llmToolDone,
+      cb
+    ),
+  onLlmRetry: (cb) =>
+    subscribe<{ requestId: string; attempt: number; max: number; reason: string }>(
+      CHANNELS.llmRetry,
+      cb
+    )
 }
 
 contextBridge.exposeInMainWorld('atlas', api)

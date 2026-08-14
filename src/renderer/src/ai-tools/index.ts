@@ -245,13 +245,22 @@ export function toolSchemas(): { type: 'function'; function: Record<string, unkn
   }))
 }
 
-export async function dispatchTool(name: string, args: Record<string, unknown>): Promise<string> {
+export async function dispatchTool(
+  name: string,
+  args: Record<string, unknown>
+): Promise<{ content: string; isError: boolean }> {
   const tool = TOOLS.find((t) => t.name === name)
-  if (!tool) return JSON.stringify({ error: `Unknown tool: ${name}` })
+  if (!tool) return { content: JSON.stringify({ error: `Unknown tool: ${name}` }), isError: true }
   try {
     const result = await tool.run(args ?? {})
-    return typeof result === 'string' ? result : JSON.stringify(result)
+    return {
+      content: typeof result === 'string' ? result : JSON.stringify(result),
+      isError: false
+    }
   } catch (e) {
-    return JSON.stringify({ error: String(e instanceof Error ? e.message : e) })
+    return {
+      content: JSON.stringify({ error: String(e instanceof Error ? e.message : e) }),
+      isError: true
+    }
   }
 }

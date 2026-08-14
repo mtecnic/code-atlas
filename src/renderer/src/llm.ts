@@ -8,6 +8,8 @@ interface Stream {
   onDone: () => void
   onError: (err: string) => void
   onTool?: (name: string, args: Record<string, unknown>) => void
+  onToolDone?: (name: string, isError: boolean) => void
+  onRetry?: (attempt: number, max: number) => void
 }
 
 const streams = new Map<string, Stream>()
@@ -28,8 +30,14 @@ function wire(): void {
   window.atlas.onLlmToolCall(({ requestId, callId, name, args }) => {
     streams.get(requestId)?.onTool?.(name, args)
     void dispatchTool(name, args).then((result) =>
-      window.atlas.llmToolResult(requestId, callId, result)
+      window.atlas.llmToolResult(requestId, callId, result.content, result.isError)
     )
+  })
+  window.atlas.onLlmToolDone(({ requestId, name, isError }) => {
+    streams.get(requestId)?.onToolDone?.(name, isError)
+  })
+  window.atlas.onLlmRetry(({ requestId, attempt, max }) => {
+    streams.get(requestId)?.onRetry?.(attempt, max)
   })
 }
 

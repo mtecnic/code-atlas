@@ -51,8 +51,14 @@ export function SettingsPanel(): React.JSX.Element | null {
     setProbing(false)
     if (result.ok && result.endpoint) {
       setLlm(result.endpoint)
+      const pf = result.preflight
+      const pfNote = pf
+        ? pf.ok
+          ? ' · chat verified ✓'
+          : ` · ⚠ ${pf.message}`
+        : ''
       setStatus(
-        `✓ Found ${result.endpoint.style === 'openai' ? 'OpenAI-compatible' : 'Ollama'} server at ${result.endpoint.baseUrl} — ${result.endpoint.models.length} model(s)`
+        `✓ Found ${result.endpoint.style === 'openai' ? 'OpenAI-compatible' : 'Ollama'} server at ${result.endpoint.baseUrl} — ${result.endpoint.models.length} model(s)${pfNote}`
       )
     } else {
       setStatus(`✗ ${result.error ?? 'Nothing found'}`)

@@ -7,7 +7,7 @@ interface Turn {
   role: 'user' | 'assistant'
   content: string
   /** tool activity chips shown above this assistant turn */
-  tools?: { name: string; detail: string }[]
+  tools?: { name: string; detail: string; isError?: boolean }[]
 }
 
 function toolChipText(name: string, args: Record<string, unknown>): string {
@@ -147,6 +147,26 @@ export function ChatPanel(): React.JSX.Element | null {
             ...t,
             tools: [...(t.tools ?? []), { name, detail: toolChipText(name, args) }]
           })),
+        onToolDone: (name, isError) =>
+          append((t) => {
+            if (!isError || !t.tools) return t
+            const tools = [...t.tools]
+            for (let i = tools.length - 1; i >= 0; i--) {
+              if (tools[i].name === name && !tools[i].isError) {
+                tools[i] = { ...tools[i], isError: true, detail: '⚠ ' + tools[i].detail }
+                break
+              }
+            }
+            return { ...t, tools }
+          }),
+        onRetry: (attempt, max) =>
+          append((t) => ({
+            ...t,
+            tools: [
+              ...(t.tools ?? []),
+              { name: '_retry', detail: `↻ retrying (${attempt}/${max})` }
+            ]
+          })),
         onDone: () => setBusy(false),
         onError: (err) => {
           append((t) => ({ ...t, content: t.content + `\n[error: ${err}]` }))
@@ -180,7 +200,7 @@ export function ChatPanel(): React.JSX.Element | null {
             {t.tools && t.tools.length > 0 && (
               <div className="chat-tools">
                 {t.tools.map((tool, j) => (
-                  <span key={j} className="tool-chip">
+                  <span key={j} className={`tool-chip${tool.isError ? ' tool-chip-error' : ''}`}>
                     {tool.detail}
                   </span>
                 ))}
