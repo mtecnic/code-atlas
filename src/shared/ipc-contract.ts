@@ -45,6 +45,8 @@ export const CHANNELS = {
 
 export interface AtlasSettings {
   llm?: LlmEndpoint
+  /** every endpoint that ever probed successfully — the switcher list */
+  llmEndpoints?: LlmEndpoint[]
   maxCommits?: number
   maxFiles?: number
   recentRepos?: string[]
@@ -52,6 +54,10 @@ export interface AtlasSettings {
   glMode?: 'default' | 'egl' | 'swiftshader'
   /** prompt-token threshold for chat receipt-compaction (0 = off) */
   contextBudget?: number
+  /** encrypted API key blob (main-process only; stripped from getSettings) */
+  llmKeyEnc?: string
+  /** computed for the renderer: whether a key is stored */
+  hasLlmKey?: boolean
   bookmarks?: Record<string, { name: string; pos: number[]; target: number[] }[]>
 }
 
@@ -82,7 +88,8 @@ export interface AtlasApi {
     | { ok: false; error: string }
   >
   getModuleGraph(fileIds: FileId[]): Promise<ModuleGraph>
-  llmProbe(host: string, port?: number): Promise<LlmProbeResult>
+  /** hostOrUrl: bare IP/host (port-scanned over http) or a full http(s) URL */
+  llmProbe(hostOrUrl: string, port?: number, apiKey?: string): Promise<LlmProbeResult>
   /** start a chat; optional OpenAI tool schemas enable the scene-agent loop */
   llmChat(messages: LlmChatMessage[], tools?: Record<string, unknown>[]): Promise<string>
   llmAbort(requestId: string): Promise<void>

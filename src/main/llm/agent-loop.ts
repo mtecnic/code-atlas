@@ -28,6 +28,8 @@ export interface ToolExecution {
 
 export interface AgentOptions {
   endpoint: LlmEndpoint
+  /** bearer credential for hosted endpoints; omitted for open local servers */
+  apiKey?: string
   messages: LlmChatMessage[]
   tools?: Record<string, unknown>[]
   executeTool: (name: string, args: Record<string, unknown>) => Promise<ToolExecution>
@@ -141,9 +143,11 @@ async function* streamOnce(
     body.tools = opts.tools
     body.tool_choice = 'auto'
   }
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (opts.apiKey) headers.Authorization = `Bearer ${opts.apiKey}`
   const res = await fetchImpl(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
     signal: opts.signal
   })

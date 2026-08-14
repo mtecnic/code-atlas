@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from 'electron'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { grammarFor } from '../shared/languages'
@@ -7,6 +7,33 @@ import parseSingle from './analyzer/parse-worker'
 import { watch, type FSWatcher } from 'node:fs'
 
 const backedUp = new Set<string>()
+
+// API key at rest: encrypted via OS keychain when available, marked plaintext
+// otherwise (headless/xrdp sessions may lack a keyring). Never sent to the
+// renderer — getSettings strips it and reports only hasLlmKey.
+function encryptKey(key: string): string {
+  if (safeStorage.isEncryptionAvailable()) {
+    return 'enc:' + safeStorage.encryptString(key).toString('base64')
+  }
+  console.warn('[atlas] no OS keyring available — storing API key unencrypted')
+  return 'plain:' + Buffer.from(key, 'utf8').toString('base64')
+}
+
+function decryptKey(blob: string | undefined): string | undefined {
+  if (!blob) return undefined
+  try {
+    if (blob.startsWith('enc:')) {
+      return safeStorage.decryptString(Buffer.from(blob.slice(4), 'base64'))
+    }
+    if (blob.startsWith('plain:')) {
+      return Buffer.from(blob.slice(6), 'base64').toString('utf8')
+    }
+  } catch (e) {
+    console.warn('[atlas] stored API key could not be decrypted:', e)
+  }
+  return undefined
+}
+
 let watcher: FSWatcher | null = null
 let watchTimer: ReturnType<typeof setTimeout> | null = null
 import { CHANNELS } from '../shared/ipc-contract'
@@ -145,18 +172,41 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     analysisStore.moduleGraph(fileIds)
   )
 
-  ipcMain.handle(CHANNELS.llmProbe, async (_e, host: string, port?: number) => {
-    const result = await probeEndpoint(host, port)
-    if (result.ok && result.endpoint) await saveSettings({ llm: result.endpoint })
-    return result
-  })
+  ipcMain.handle(
+    CHANNELS.llmProbe,
+    async (_e, hostOrUrl: string, port?: number, apiKey?: string) => {
+      const settings = await loadSettings()
+      // a freshly-typed key wins; otherwise reuse the stored one (re-detect flow)
+      const key = apiKey?.trim() || decryptKey(settings.llmKeyEnc)
+      const result = await probeEndpoint(hostOrUrl, port, key)
+      if (result.ok && result.endpoint) {
+        const list = (settings.llmEndpoints ?? []).filter(
+          (e2) => e2.baseUrl !== result.endpoint!.baseUrl
+        )
+        const patch: Record<string, unknown> = {
+          llm: result.endpoint,
+          llmEndpoints: [result.endpoint, ...list].slice(0, 8)
+        }
+        if (apiKey?.trim()) patch.llmKeyEnc = encryptKey(apiKey.trim())
+        await saveSettings(patch)
+      }
+      return result
+    }
+  )
 
   ipcMain.handle(
     CHANNELS.llmChat,
     async (e, messages: LlmChatMessage[], tools?: Record<string, unknown>[]) => {
       const settings = await loadSettings()
       if (!settings.llm) throw new Error('No LLM endpoint configured')
-      return startChat(e.sender, settings.llm, messages, tools, settings.contextBudget)
+      return startChat(
+        e.sender,
+        settings.llm,
+        messages,
+        tools,
+        settings.contextBudget,
+        decryptKey(settings.llmKeyEnc)
+      )
     }
   )
 
@@ -213,7 +263,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(CHANNELS.buildSummaries, async (e) => {
     const settings = await loadSettings()
     if (!settings.llm) return { error: 'No LLM endpoint configured' }
-    return buildSummaries(e.sender, settings.llm)
+    return buildSummaries(e.sender, settings.llm, decryptKey(settings.llmKeyEnc))
   })
   ipcMain.handle(CHANNELS.cancelSummaries, () => cancelSummaries())
   ipcMain.handle(CHANNELS.getSummaries, async () => {
@@ -231,7 +281,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     app.exit(0)
   })
 
-  ipcMain.handle(CHANNELS.getSettings, () => loadSettings())
+  ipcMain.handle(CHANNELS.getSettings, async () => {
+    const settings = await loadSettings()
+    const { llmKeyEnc, ...rest } = settings
+    return { ...rest, hasLlmKey: !!llmKeyEnc }
+  })
   ipcMain.handle(CHANNELS.saveSettings, (_e, patch: Partial<AtlasSettings>) =>
     saveSettings(patch)
   )

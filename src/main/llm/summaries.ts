@@ -36,7 +36,8 @@ export function cancelSummaries(): void {
 
 async function askBatch(
   endpoint: LlmEndpoint,
-  batch: { path: string; head: string }[]
+  batch: { path: string; head: string }[],
+  apiKey?: string
 ): Promise<Map<string, string>> {
   const prompt =
     'For each file below, write ONE line: `<path> :: <what this file does, max 14 words>`. ' +
@@ -44,7 +45,10 @@ async function askBatch(
     batch.map((b) => `--- ${b.path}\n${b.head}`).join('\n\n')
   const res = await fetch(`${endpoint.baseUrl}/v1/chat/completions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {})
+    },
     body: JSON.stringify({
       model: endpoint.model,
       messages: [{ role: 'user', content: prompt }],
@@ -70,6 +74,7 @@ async function askBatch(
 export async function buildSummaries(
   wc: WebContents,
   endpoint: LlmEndpoint,
+  apiKey?: string,
   maxFiles = 600
 ): Promise<{ built: number; cached: number; total: number } | { error: string }> {
   const snapshot = analysisStore.snapshot
@@ -117,7 +122,7 @@ export async function buildSummaries(
       if (cancelRequested) break
       const batch = todo.slice(i, i + BATCH)
       try {
-        const results = await askBatch(endpoint, batch)
+        const results = await askBatch(endpoint, batch, apiKey)
         for (const b of batch) {
           const summary = results.get(b.path)
           if (summary) {

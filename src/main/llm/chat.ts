@@ -30,7 +30,8 @@ export function startChat(
   endpoint: LlmEndpoint,
   messages: LlmChatMessage[],
   tools?: Record<string, unknown>[],
-  contextBudget?: number
+  contextBudget?: number,
+  apiKey?: string
 ): string {
   const requestId = randomUUID()
   const ac = new AbortController()
@@ -78,7 +79,7 @@ export function startChat(
   }
 
   void runAgentLoop(
-    { endpoint, messages, tools, executeTool, signal: ac.signal, contextBudget },
+    { endpoint, apiKey, messages, tools, executeTool, signal: ac.signal, contextBudget },
     sink
   ).finally(() => active.delete(requestId))
   return requestId

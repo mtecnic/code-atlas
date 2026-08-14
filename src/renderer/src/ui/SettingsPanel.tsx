@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAtlas } from '../store'
+import type { LlmEndpoint } from '../../../shared/model'
 
 export function SettingsPanel(): React.JSX.Element | null {
   const open = useAtlas((s) => s.settingsOpen)
@@ -9,6 +10,29 @@ export function SettingsPanel(): React.JSX.Element | null {
   const [host, setHost] = useState('')
   const [status, setStatus] = useState<string>('')
   const [probing, setProbing] = useState(false)
+  const [apiKey, setApiKey] = useState('')
+  const [hasKey, setHasKey] = useState(false)
+  const [savedEndpoints, setSavedEndpoints] = useState<LlmEndpoint[]>([])
+
+  useEffect(() => {
+    if (!open) return
+    void window.atlas.getSettings().then((s) => {
+      setHasKey(!!s.hasLlmKey)
+      setSavedEndpoints(s.llmEndpoints ?? [])
+    })
+  }, [open, llm])
+
+  const useEndpoint = async (ep: LlmEndpoint): Promise<void> => {
+    setLlm(ep)
+    await window.atlas.saveSettings({ llm: ep })
+    setStatus(`✓ Switched to ${ep.baseUrl} · ${ep.model}`)
+  }
+
+  const forgetEndpoint = async (ep: LlmEndpoint): Promise<void> => {
+    const next = savedEndpoints.filter((e2) => e2.baseUrl !== ep.baseUrl)
+    setSavedEndpoints(next)
+    await window.atlas.saveSettings({ llmEndpoints: next })
+  }
   const [indexBusy, setIndexBusy] = useState(false)
   const [indexProgress, setIndexProgress] = useState('')
   const [indexStatus, setIndexStatus] = useState('')
@@ -47,10 +71,15 @@ export function SettingsPanel(): React.JSX.Element | null {
     if (!host.trim()) return
     setProbing(true)
     setStatus('Probing…')
-    const result = await window.atlas.llmProbe(host.trim())
+    const result = await window.atlas.llmProbe(host.trim(), undefined, apiKey || undefined)
     setProbing(false)
     if (result.ok && result.endpoint) {
       setLlm(result.endpoint)
+      setApiKey('')
+      void window.atlas.getSettings().then((s2) => {
+        setHasKey(!!s2.hasLlmKey)
+        setSavedEndpoints(s2.llmEndpoints ?? [])
+      })
       const pf = result.preflight
       const pfNote = pf
         ? pf.ok
@@ -69,7 +98,9 @@ export function SettingsPanel(): React.JSX.Element | null {
     if (!llm) return
     const next = { ...llm, model }
     setLlm(next)
-    await window.atlas.saveSettings({ llm: next })
+    const list = savedEndpoints.map((e2) => (e2.baseUrl === next.baseUrl ? next : e2))
+    setSavedEndpoints(list)
+    await window.atlas.saveSettings({ llm: next, llmEndpoints: list })
   }
 
   return (
@@ -78,13 +109,13 @@ export function SettingsPanel(): React.JSX.Element | null {
         <h2>Settings</h2>
         <h3>LLM endpoint</h3>
         <p className="hint">
-          Enter an IP or host (port optional). Auto-detects vLLM, llama.cpp, LM Studio
-          (OpenAI-compatible) and Ollama.
+          An IP or host scans common local ports (vLLM, llama.cpp, LM Studio, Ollama); a full
+          http(s) address is used directly. Optional key for secured endpoints.
         </p>
         <div className="row">
           <input
             value={host}
-            placeholder="192.168.86.23  or  localhost:8000"
+            placeholder="192.168.86.23 · localhost:8000 · http://box:8080"
             onChange={(e) => setHost(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void probe()}
           />
@@ -92,7 +123,40 @@ export function SettingsPanel(): React.JSX.Element | null {
             {probing ? '…' : 'Detect'}
           </button>
         </div>
+        <div className="row" style={{ marginTop: 6 }}>
+          <input
+            type="password"
+            value={apiKey}
+            placeholder={hasKey ? 'API key (saved — leave blank to keep)' : 'API key (optional)'}
+            onChange={(e) => setApiKey(e.target.value)}
+          />
+        </div>
         {status && <p className="status">{status}</p>}
+        {savedEndpoints.length > 0 && (
+          <>
+            <h3>Saved endpoints</h3>
+            {savedEndpoints.map((ep) => (
+              <div key={ep.baseUrl} className={`endpoint-row${llm?.baseUrl === ep.baseUrl ? ' active' : ''}`}>
+                <div className="endpoint-info">
+                  <span className="endpoint-url">{ep.baseUrl.replace(/^https?:\/\//, '')}</span>
+                  <span className="endpoint-model">
+                    {ep.style} · {ep.model}
+                  </span>
+                </div>
+                {llm?.baseUrl === ep.baseUrl ? (
+                  <span className="endpoint-active">● active</span>
+                ) : (
+                  <button className="btn" onClick={() => void useEndpoint(ep)}>
+                    Use
+                  </button>
+                )}
+                <button className="btn" title="Forget" onClick={() => void forgetEndpoint(ep)}>
+                  ✕
+                </button>
+              </div>
+            ))}
+          </>
+        )}
         {llm && (
           <>
             <h3>Model</h3>

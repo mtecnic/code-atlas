@@ -22,7 +22,8 @@ const api: AtlasApi = {
   writeFile: (fileId: FileId, content: string) =>
     ipcRenderer.invoke(CHANNELS.writeFile, fileId, content),
   getModuleGraph: (fileIds: FileId[]) => ipcRenderer.invoke(CHANNELS.getModuleGraph, fileIds),
-  llmProbe: (host: string, port?: number) => ipcRenderer.invoke(CHANNELS.llmProbe, host, port),
+  llmProbe: (hostOrUrl: string, port?: number, apiKey?: string) =>
+    ipcRenderer.invoke(CHANNELS.llmProbe, hostOrUrl, port, apiKey),
   llmChat: (messages: LlmChatMessage[], tools?: Record<string, unknown>[]) =>
     ipcRenderer.invoke(CHANNELS.llmChat, messages, tools),
   llmAbort: (requestId: string) => ipcRenderer.invoke(CHANNELS.llmAbort, requestId),
