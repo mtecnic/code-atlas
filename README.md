@@ -143,6 +143,10 @@ ATLAS_SHOT_DELAY=45000 xvfb-run -a npx electron out/main/index.js
 
 **Built for people who think codebases are worth seeing.**
 
-*Bundled UI font: [DejaVu Sans](https://dejavu-fonts.github.io/) (free license).*
+*All real parsing is [tree-sitter](https://tree-sitter.github.io/) and its grammars;
+rendering is [three.js](https://threejs.org/). Bundled UI font:
+[DejaVu Sans](https://dejavu-fonts.github.io/) (free license).*
+
+*Full attribution and licences: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).*
 
 </div>
