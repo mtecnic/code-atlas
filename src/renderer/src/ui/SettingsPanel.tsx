@@ -115,7 +115,7 @@ export function SettingsPanel(): React.JSX.Element | null {
         <div className="row">
           <input
             value={host}
-            placeholder="192.168.86.23 · localhost:8000 · http://box:8080"
+            placeholder="192.168.1.50 · localhost:8000 · http://box:8080"
             onChange={(e) => setHost(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && void probe()}
           />

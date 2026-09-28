@@ -124,7 +124,7 @@ export type LlmStyle = 'openai' | 'ollama'
 
 export interface LlmEndpoint {
   style: LlmStyle
-  baseUrl: string // e.g. http://192.168.86.23:8000
+  baseUrl: string // e.g. http://192.168.1.50:8000
   models: string[]
   model: string // selected
 }
